@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Ralf Schlatterbeck Open Source Consulting
+ * Copyright (c) 2013, Institute for Pervasive Computing, ETH Zurich
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,32 +30,15 @@
  */
 
 /**
- * \addgroup Arduino Process
- *
- * This wraps the Arduino-API entry points `loop` and `setup` in a
- * contiki process.
- *
- * If the normal contiki includes are used and resources initialized in
- * `setup`, Contiki resources can be used in an arduino sketch.
- *
- * @{
- */
-
-/**
  * \file
- *        Wrapper for Arduino sketches
+ *      Example resource
  * \author
- *        Ralf Schlatterbeck <rsc@runtux.com>
- *
+ *      Matthias Kovatsch <kovatsch@inf.ethz.ch>
  */
 
-#include <stdlib.h>
 #include <string.h>
-#include "arduino-process.h"
-#include "hw_timer.h"
-#include "adc.h"
-#include "hw-arduino.h"
-#include "contiki.h"
+#include "rest-engine.h"
+#include "er-coap.h"
 
 #define DEBUG 0
 #if DEBUG
@@ -69,83 +52,50 @@
 #define PRINTLLADDR(addr)
 #endif
 
-
-extern volatile uint8_t mcusleepcycle;
-#if PLATFORM_HAS_BUTTON
-#include "rest-engine.h"
-#include "dev/button-sensor.h"
-extern resource_t res_event, res_separate;
-#endif /* PLATFORM_HAS_BUTTON */
-
-volatile uint8_t mcusleepcycleval; 
-
-/*-------------- enabled sleep mode ----------------------------------------*/
-void
-mcu_sleep_init(void)
-{
-	mcusleepcycleval=mcusleepcycle; 
-}
-void
-mcu_sleep_on(void)
-{
-	mcusleepcycle= mcusleepcycleval;
-}
-/*--------------- disable sleep mode ---------------------------------------*/
-void
-mcu_sleep_off(void)
-{
-	mcusleepcycle=0;
-}
-/*---------------- set duty cycle value ------------------------------------*/
-void
-mcu_sleep_set(uint8_t value)
-{
-	mcusleepcycleval= value;
-	mcusleepcycle = mcusleepcycleval;
-}
-
-PROCESS(arduino_sketch, "Arduino Sketch Wrapper");
-
-#ifndef LOOP_INTERVAL
-#define LOOP_INTERVAL		(1 * CLOCK_SECOND)
-#endif
-
-PROCESS_THREAD(arduino_sketch, ev, data)
-{
-  static struct etimer loop_periodic_timer;
-  
-  PROCESS_BEGIN();
-  adc_init ();
-  mcu_sleep_init ();
-  setup ();
-  /* Define application-specific events here. */
-  etimer_set(&loop_periodic_timer, LOOP_INTERVAL);
-  while (1) {
-	PROCESS_WAIT_EVENT();
-#if PLATFORM_HAS_BUTTON
-    if(ev == sensors_event && data == &button_sensor) {
-      PRINTF("*******BUTTON*******\n");
-
-      /* Call the event_handler for this application-specific event. */
-      res_event.trigger();
-
-      /* Also call the separate response example handler. */
-      res_separate.resume();
-    }
-#endif /* PLATFORM_HAS_BUTTON */
-
-	if(etimer_expired(&loop_periodic_timer)) {
-        loop ();		
-        etimer_reset(&loop_periodic_timer);
-    }
-  }
-  PROCESS_END();
-}
-
+static void res_get_handler(void *request, void *response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset);
+static void res_event_handler(void);
 
 /*
- * VI settings, see coding style
- * ex:ts=8:et:sw=2
+ * Example for an event resource.
+ * Additionally takes a period parameter that defines the interval to call [name]_periodic_handler().
+ * A default post_handler takes care of subscriptions and manages a list of subscribers to notify.
  */
+EVENT_RESOURCE(res_event,
+               "title=\"Event demo\";obs",
+               res_get_handler,
+               NULL,
+               NULL,
+               NULL,
+               res_event_handler);
 
-/** @} */
+/*
+ * Use local resource state that is accessed by res_get_handler() and altered by res_event_handler() or PUT or POST.
+ */
+static int32_t event_counter = 0;
+
+static void
+res_get_handler(void *request, void *response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+{
+  REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
+  REST.set_response_payload(response, buffer, snprintf((char *)buffer, preferred_size, "EVENT %lu", event_counter));
+
+  /* A post_handler that handles subscriptions/observing will be called for periodic resources by the framework. */
+}
+/*
+ * Additionally, res_event_handler must be implemented for each EVENT_RESOURCE.
+ * It is called through <res_name>.trigger(), usually from the server process.
+ */
+static void
+res_event_handler(void)
+{
+  /* Do the update triggered by the event here, e.g., sampling a sensor. */
+  ++event_counter;
+
+  /* Usually a condition is defined under with subscribers are notified, e.g., event was above a threshold. */
+  if(1) {
+    PRINTF("TICK %u for /%s\n", event_counter, res_event.url);
+
+    /* Notify the registered observers which will trigger the res_get_handler to create the response. */
+    REST.notify_subscribers(&res_event);
+  }
+}
