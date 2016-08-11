@@ -57,7 +57,7 @@
 #include "hw-arduino.h"
 #include "contiki.h"
 
-#define DEBUG 1
+#define DEBUG 0
 #if DEBUG
 #include <stdio.h>
 #define PRINTF(...) printf(__VA_ARGS__)
@@ -124,6 +124,7 @@ PROCESS_THREAD(arduino_sketch, ev, data)
 	PROCESS_WAIT_EVENT();
 #if PLATFORM_HAS_BUTTON
     if(ev == sensors_event && data == &button_sensor) {
+      mcu_sleep_off();
       PRINTF("*******BUTTON*******\n");
 
       /* Call the event_handler for this application-specific event. */
@@ -131,6 +132,7 @@ PROCESS_THREAD(arduino_sketch, ev, data)
 
       /* Also call the separate response example handler. */
       res_separate.resume();
+      mcu_sleep_on();
     }
 #endif /* PLATFORM_HAS_BUTTON */
 

@@ -46,12 +46,10 @@ void setup (void)
     rest_activate_resource(&res_event, "s/button");      
 //    rest_activate_resource (&res_battery, "p/server");    
 
-    NETSTACK_MAC.off(1);
+//    NETSTACK_MAC.off(1);
 }
 
 void loop (void)
 {
-	mcu_sleep_off();
-	
-	mcu_sleep_on();
+
 }
