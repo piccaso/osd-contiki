@@ -57,7 +57,7 @@
 #include "hw-arduino.h"
 #include "contiki.h"
 
-#define DEBUG 0
+#define DEBUG 1
 #if DEBUG
 #include <stdio.h>
 #define PRINTF(...) printf(__VA_ARGS__)
@@ -135,7 +135,9 @@ PROCESS_THREAD(arduino_sketch, ev, data)
 #endif /* PLATFORM_HAS_BUTTON */
 
 	if(etimer_expired(&loop_periodic_timer)) {
-        loop ();		
+        mcu_sleep_off();
+        loop ();			
+        mcu_sleep_on();
         etimer_reset(&loop_periodic_timer);
     }
   }
