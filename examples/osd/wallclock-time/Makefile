@@ -1,99 +1,48 @@
-all: er-example-server \
-    er-example-server.osd-merkur.hex er-example-server.osd-merkur.eep
-# use this target explicitly if requried: er-plugtest-server
+EXE=wallclock
 
-# variable for this Makefile
-# configure CoAP implementation (3|7|12|13) (er-coap-07 also supports CoAP draft 08)
-WITH_COAP=13
-
-# for some platforms
-UIP_CONF_IPV6=1
-# IPv6 make config disappeared completely
-CFLAGS += -DUIP_CONF_IPV6=1
+all: $(EXE)
 
 CONTIKI=../../..
+
 CFLAGS += -DPROJECT_CONF_H=\"project-conf.h\"
 
-PROJECT_SOURCEFILES +=
+# automatically build RESTful resources
+REST_RESOURCES_DIR = ./resources
+REST_RESOURCES_DIR_COMMON = ../resources-common
+REST_RESOURCES_FILES= $(notdir \
+    $(shell find $(REST_RESOURCES_DIR_COMMON) -name '*.c') \
+    )
 
-# variable for Makefile.include
-ifneq ($(TARGET), minimal-net)
-CFLAGS += -DUIP_CONF_IPV6_RPL=1
-else
-# minimal-net does not support RPL under Linux and is mostly used to test CoAP only
-${info INFO: compiling without RPL}
-CFLAGS += -DUIP_CONF_IPV6_RPL=0
-CFLAGS += -DHARD_CODED_ADDRESS=\"fdfd::10\"
-${info INFO: compiling with large buffers}
-CFLAGS += -DUIP_CONF_BUFFER_SIZE=2048
-CFLAGS += -DREST_MAX_CHUNK_SIZE=1024
-CFLAGS += -DCOAP_MAX_HEADER_SIZE=640
-endif
+PROJECTDIRS += $(REST_RESOURCES_DIR) $(REST_RESOURCES_DIR_COMMON)
+PROJECT_SOURCEFILES += $(REST_RESOURCES_FILES)
 
 # linker optimizations
 SMALL=1
 
-# REST framework, requires WITH_COAP
-ifeq ($(WITH_COAP), 13)
-${info INFO: compiling with CoAP-13}
-CFLAGS += -DWITH_COAP=13
-CFLAGS += -DREST=coap_rest_implementation
-CFLAGS += -DUIP_CONF_TCP=0
-APPS += er-coap-13
-else ifeq ($(WITH_COAP), 12)
-${info INFO: compiling with CoAP-12}
-CFLAGS += -DWITH_COAP=12
-CFLAGS += -DREST=coap_rest_implementation
-CFLAGS += -DUIP_CONF_TCP=0
-APPS += er-coap-12
-else ifeq ($(WITH_COAP), 7)
-${info INFO: compiling with CoAP-08}
-CFLAGS += -DWITH_COAP=7
-CFLAGS += -DREST=coap_rest_implementation
-CFLAGS += -DUIP_CONF_TCP=0
-APPS += er-coap-07
-else ifeq ($(WITH_COAP), 3)
-${info INFO: compiling with CoAP-03}
-CFLAGS += -DWITH_COAP=3
-CFLAGS += -DREST=coap_rest_implementation
-CFLAGS += -DUIP_CONF_TCP=0
-APPS += er-coap-03
-else
-${info INFO: compiling with HTTP}
-CFLAGS += -DWITH_HTTP
-CFLAGS += -DREST=http_rest_implementation
-CFLAGS += -DUIP_CONF_TCP=1
-APPS += er-http-engine
-endif
+# REST Engine shall use Erbium CoAP implementation
+APPS += er-coap
+APPS += rest-engine
+APPS += json json-resource time
 
-APPS += erbium time json json-resource
-
+CONTIKI_WITH_IPV6 = 1
 include $(CONTIKI)/Makefile.include
 
-er-example-server.osd-merkur.hex: er-example-server.osd-merkur
-	avr-objcopy -j .text -j .data -O ihex er-example-server.osd-merkur \
-	    er-example-server.osd-merkur.hex
-
-er-example-server.osd-merkur.eep: er-example-server.osd-merkur
-	avr-objcopy -j .eeprom --set-section-flags=.eeprom="alloc,load" \
-	    --change-section-lma .eeprom=0 -O ihex                      \
-	    er-example-server.osd-merkur er-example-server.osd-merkur.eep
-
-flash: er-example-server.osd-merkur.hex er-example-server.osd-merkur.eep
-	avrdude -pm128rfa1 -c arduino -P/dev/ttyUSB0 -b57600 -e -U \
-	    flash:w:er-example-server.osd-merkur.hex:a -U \
-	    eeprom:w:er-example-server.osd-merkur.eep:a
-
-.PHONY: flash
-
-$(CONTIKI)/tools/tunslip6:      $(CONTIKI)/tools/tunslip6.c
+$(CONTIKI)/tools/tunslip6: $(CONTIKI)/tools/tunslip6.c
 	(cd $(CONTIKI)/tools && $(MAKE) tunslip6)
 
 connect-router: $(CONTIKI)/tools/tunslip6
 	sudo $(CONTIKI)/tools/tunslip6 aaaa::1/64
 
-connect-router-cooja:   $(CONTIKI)/tools/tunslip6
-	sudo $(CONTIKI)/tools/tunslip6 -a 127.0.0.1 aaaa::1/64
+connect-router-cooja: $(CONTIKI)/tools/tunslip6
+	sudo $(CONTIKI)/tools/tunslip6 -a 127.0.0.1 -p 60001 aaaa::1/64
 
 connect-minimal:
 	sudo ip address add fdfd::1/64 dev tap0
+
+avr-size: $(EXE).$(TARGET).sz
+
+# At some point we may want to include the eeprom file
+flash: $(EXE).$(TARGET).u # $(EXE).$(TARGET).eu
+
+.PHONY: flash avr-size
+.PRECIOUS: $(EXE).$(TARGET).hex $(EXE).$(TARGET).eep

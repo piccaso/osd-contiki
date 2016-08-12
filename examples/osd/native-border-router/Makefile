@@ -1,23 +1,8 @@
-CONTIKI_PROJECT=border-router
-all: $(CONTIKI_PROJECT)
+EXE=border-router
+all: $(EXE)
 APPS = slip-cmd
 
 CONTIKI=../../..
-
-WITH_UIP6=1
-UIP_CONF_IPV6=1
-CFLAGS+= -DUIP_CONF_IPV6_RPL
-
-WITH_COAP=7
-
-ifeq ($(WITH_COAP), 7)
-${info INFO: compiling with CoAP-08}
-CFLAGS += -DWITH_COAP=7
-CFLAGS += -DREST=coap_rest_implementation
-#CFLAGS += -DUIP_CONF_TCP=0
-APPS += er-coap-07
-APPS+=erbium
-endif
 
 #linker optimizations
 SMALL=1
@@ -26,7 +11,7 @@ CFLAGS += -DPROJECT_CONF_H=\"project-conf.h\"
 PROJECT_SOURCEFILES += border-router-cmds.c tun-bridge.c border-router-rdc.c \
 slip-config.c slip-dev.c
 
-WITH_WEBSERVER=0
+WITH_WEBSERVER=1
 ifeq ($(WITH_WEBSERVER),1)
 CFLAGS += -DWEBSERVER=1
 PROJECT_SOURCEFILES += httpd-simple.c
@@ -35,7 +20,16 @@ APPS += $(WITH_WEBSERVER)
 CFLAGS += -DWEBSERVER=2
 endif
 
+CONTIKI_WITH_IPV6 = 1
 include $(CONTIKI)/Makefile.include
 
 connect-router:	border-router.native
 	sudo ./border-router.native aaaa::1/64
+
+avr-size: $(EXE).$(TARGET).sz
+
+flash: $(EXE).$(TARGET).u $(EXE).$(TARGET).eu
+
+.PHONY: flash avr-size
+.PRECIOUS: $(EXE).$(TARGET).hex $(EXE).$(TARGET).eep
+

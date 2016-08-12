@@ -1,76 +1,45 @@
-all: er-example-server er-example-client
-# use this target explicitly if requried: er-plugtest-server
+EXE=er-example-server er-example-client
 
-
-# variable for this Makefile
-# configure CoAP implementation (3|7|12|13) (er-coap-07 also supports CoAP draft 08)
-WITH_COAP=13
-
-# for some platforms
-UIP_CONF_IPV6=1
-# IPv6 make config disappeared completely
-CFLAGS += -DUIP_CONF_IPV6=1
+all: $(EXE)
 
 CONTIKI=../../..
+
 CFLAGS += -DPROJECT_CONF_H=\"project-conf.h\"
 
-# variable for Makefile.include
-ifneq ($(TARGET), minimal-net)
-CFLAGS += -DUIP_CONF_IPV6_RPL=1
-else
-# minimal-net does not support RPL under Linux and is mostly used to test CoAP only
-${info INFO: compiling without RPL}
-CFLAGS += -DUIP_CONF_IPV6_RPL=0
-CFLAGS += -DHARD_CODED_ADDRESS=\"fdfd::10\"
-${info INFO: compiling with large buffers}
-CFLAGS += -DUIP_CONF_BUFFER_SIZE=2048
-CFLAGS += -DREST_MAX_CHUNK_SIZE=1024
-CFLAGS += -DCOAP_MAX_HEADER_SIZE=640
-endif
+# automatically build RESTful resources including common resources
+REST_RESOURCES_DIR = ./resources
+REST_RESOURCES_DIR_COMMON = ../resources-common
+REST_RESOURCES_FILES = $(notdir \
+    $(shell find $(REST_RESOURCES_DIR) -name '*.c') \
+    $(shell find $(REST_RESOURCES_DIR_COMMON) -name '*.c') \
+    )
+
+PROJECTDIRS += $(REST_RESOURCES_DIR) $(REST_RESOURCES_DIR_COMMON)
+PROJECT_SOURCEFILES += $(REST_RESOURCES_FILES)
 
 # linker optimizations
 SMALL=1
 
-# REST framework, requires WITH_COAP
-ifeq ($(WITH_COAP), 13)
-${info INFO: compiling with CoAP-13}
-CFLAGS += -DWITH_COAP=13
-CFLAGS += -DREST=coap_rest_implementation
-CFLAGS += -DUIP_CONF_TCP=0
-APPS += er-coap-13
-else ifeq ($(WITH_COAP), 12)
-${info INFO: compiling with CoAP-12}
-CFLAGS += -DWITH_COAP=12
-CFLAGS += -DREST=coap_rest_implementation
-CFLAGS += -DUIP_CONF_TCP=0
-APPS += er-coap-12
-else ifeq ($(WITH_COAP), 7)
-${info INFO: compiling with CoAP-08}
-CFLAGS += -DWITH_COAP=7
-CFLAGS += -DREST=coap_rest_implementation
-CFLAGS += -DUIP_CONF_TCP=0
-APPS += er-coap-07
-else ifeq ($(WITH_COAP), 3)
-${info INFO: compiling with CoAP-03}
-CFLAGS += -DWITH_COAP=3
-CFLAGS += -DREST=coap_rest_implementation
-CFLAGS += -DUIP_CONF_TCP=0
-APPS += er-coap-03
-else
-${info INFO: compiling with HTTP}
-CFLAGS += -DWITH_HTTP
-CFLAGS += -DREST=http_rest_implementation
-CFLAGS += -DUIP_CONF_TCP=1
-APPS += er-http-engine
-endif
-
-APPS += erbium
+# REST Engine shall use Erbium CoAP implementation
+APPS += er-coap
+APPS += rest-engine
 
 # optional rules to get assembly
 #CUSTOM_RULE_C_TO_OBJECTDIR_O = 1
 #CUSTOM_RULE_S_TO_OBJECTDIR_O = 1
 
+CONTIKI_WITH_IPV6 = 1
 include $(CONTIKI)/Makefile.include
+
+# minimal-net target is currently broken in Contiki
+ifeq ($(TARGET), minimal-net)
+CFLAGS += -DHARD_CODED_ADDRESS=\"fdfd::10\"
+${info INFO: er-example compiling with large buffers}
+CFLAGS += -DUIP_CONF_BUFFER_SIZE=1300
+CFLAGS += -DREST_MAX_CHUNK_SIZE=1024
+CFLAGS += -DCOAP_MAX_HEADER_SIZE=176
+CONTIKI_WITH_RPL=0
+endif
 
 # optional rules to get assembly
 #$(OBJECTDIR)/%.o: asmdir/%.S
@@ -88,7 +57,23 @@ connect-router:	$(CONTIKI)/tools/tunslip6
 	sudo $(CONTIKI)/tools/tunslip6 aaaa::1/64
 
 connect-router-cooja:	$(CONTIKI)/tools/tunslip6
-	sudo $(CONTIKI)/tools/tunslip6 -a 127.0.0.1 aaaa::1/64
+	sudo $(CONTIKI)/tools/tunslip6 -a 127.0.0.1 -p 60001 aaaa::1/64
+
+connect-router-native:	$(CONTIKI)/examples/ipv6/native-border-router/border-router.native
+	sudo $(CONTIKI)/exmples/ipv6/native-border-router/border-router.native -a 127.0.0.1 -p 60001 aaaa::1/64
 
 connect-minimal:
-	sudo ip address add fdfd::1/64 dev tap0
+	sudo ip address add fdfd::1/64 dev tap0 
+
+avr-size-server: er-example-server.$(TARGET).sz
+
+avr-size-client: er-example-server.$(TARGET).sz
+
+flash-server: er-example-server.$(TARGET).u er-example-server.$(TARGET).eu
+
+flash-client: er-example-client.$(TARGET).u er-example-client.$(TARGET).eu
+
+.PHONY: flash-client avr-size-client flash-server avr-size-server
+.PRECIOUS: er-example-server.$(TARGET).hex er-example-server.$(TARGET).eep \
+           er-example-client.$(TARGET).hex er-example-client.$(TARGET).eep
+

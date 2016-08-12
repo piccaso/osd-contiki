@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Ralf Schlatterbeck Open Source Consulting
+ * Copyright (c) 2014-15, Ralf Schlatterbeck Open Source Consulting
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -177,7 +177,6 @@ static inline uint32_t micros (void)
  * behaviour of arduino implementation.
  */
 #define millis()              (((uint32_t)clock_time())*1000L/CLOCK_SECOND)
-#define micros()              (clock_seconds()*1000L+
 #define delay(ms)             clock_delay_msec(ms)
 #define delayMicroseconds(us) clock_delay_usec(us)
 

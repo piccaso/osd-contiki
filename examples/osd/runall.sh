@@ -1,13 +1,6 @@
 #!/bin/bash
 
 # er-rest-example-merkurboard
-echo "merkurboard"
-cd ./merkurboard
-./run.sh
-cd ..
-echo "done (merkurboard)"
-
-# er-rest-example-merkurboard
 echo "er-rest-example-merkurboard"
 cd ./er-rest-example-merkurboard
 ./run.sh
@@ -20,6 +13,13 @@ cd ./climate
 ./run.sh
 cd ..
 echo "done (Climate)"
+
+# Climate2
+echo "Climate2"
+cd ./climate2
+./run.sh
+cd ..
+echo "done (Climate2)"
 
 # Embeddvm
 echo "Embedded-VM"
@@ -42,12 +42,6 @@ cd ./pingtheplug
 cd ..
 echo "done (Pingtheplug)"
 
-# 6lowpan-tk
-#echo "6loWPAN-Tür/Fenster Kontakt"
-#cd ./6lowpan-tk
-#./run.sh
-#cd ..
-#echo "done (6loWPAN-Tür/Fenster Kontakt)"
 
 # PIR-Sensor
 #echo "PIR-Sensor"

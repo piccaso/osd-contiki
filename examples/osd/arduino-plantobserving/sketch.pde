@@ -11,21 +11,28 @@
  */
 
 extern "C" {
-#include <stdio.h>
-#include "moisture.h"
+#include "rest-engine.h"
+
+extern resource_t res_moisture, res_battery;
+uint8_t moisture_pin = A5;
+uint8_t moisture_vcc = 19;
+uint16_t moisture_voltage = 0;
 
 #define LED_PIN 4
-
-uint8_t moisture_pin = A5;
-uint16_t moisture_voltage = 0;
 }
 
 void setup (void)
 {
+    // switch off the led
     pinMode(LED_PIN, OUTPUT);
     digitalWrite(LED_PIN, HIGH);
+    // init moisture sensor
+    pinMode(moisture_vcc, OUTPUT);
+    digitalWrite(moisture_vcc, LOW);
+    // init coap resourcen
     rest_init_engine ();
-    rest_activate_resource (&resource_moisture);
+    rest_activate_resource (&res_moisture, "s/moisture");
+    rest_activate_resource (&res_battery, "s/battery");
 }
 
 void loop (void)

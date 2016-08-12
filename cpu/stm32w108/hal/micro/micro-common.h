@@ -1,11 +1,15 @@
-/** @file micro-common.h
+/** @file cpu/stm32w108/hal/micro/micro-common.h
  * @brief Minimal Hal functions common across all microcontroller-specific files.
  * See @ref micro for documentation.
  *
  * <!--(C) COPYRIGHT 2010 STMicroelectronics. All rights reserved.        -->
  */
- 
-/** @addtogroup micro
+
+/**
+ * @addtogroup stm32w-cpu
+ * @{ */
+
+/** @defgroup micro Micro
  * Many of the supplied example applications use these microcontroller functions.
  * See hal/micro/micro-common.h for source code.
  *
@@ -41,10 +45,10 @@ void halPowerUp(void);
 */
 void halPowerDown(void);
 
-/** @brief The value that must be passed as the single parameter to 
- *  ::halInternalDisableWatchDog() in order to sucessfully disable the watchdog 
+/** @brief The value that must be passed as the single parameter to
+ *  ::halInternalDisableWatchDog() in order to sucessfully disable the watchdog
  *  timer.
- */ 
+ */
 #define MICRO_DISABLE_WATCH_DOG_KEY 0xA5
 
 /** @brief Enables the watchdog timer.
@@ -53,9 +57,9 @@ void halInternalEnableWatchDog(void);
 
 /** @brief Disables the watchdog timer.
  *
- * @note To prevent the watchdog from being disabled accidentally, 
+ * @note To prevent the watchdog from being disabled accidentally,
  * a magic key must be provided.
- * 
+ *
  * @param magicKey  A value (::MICRO_DISABLE_WATCH_DOG_KEY) that enables the function.
  */
 void halInternalDisableWatchDog(uint8_t magicKey);
@@ -66,38 +70,43 @@ void halInternalDisableWatchDog(uint8_t magicKey);
  */
 boolean halInternalWatchDogEnabled( void );
 
-#ifdef DOXYGEN_SHOULD_SKIP_THIS
 /** @brief Enumerations for the possible microcontroller sleep modes.
- * - SLEEPMODE_RUNNING
- *     Everything is active and running.  In practice this mode is not
- *     used, but it is defined for completeness of information.
- * - SLEEPMODE_IDLE
- *     Only the CPU is idled.  The rest of the chip continues runing
- *     normally.  The chip will wake from any interrupt.
- * - SLEEPMODE_WAKETIMER
- *     The sleep timer clock sources remain running.  The RC is always
- *     running and the 32kHz XTAL depends on the board header.  Wakeup
- *     is possible from both GPIO and the sleep timer.  System time
- *     is maintained.  The sleep timer is assumed to be configured
- *     properly for wake events.
- * - SLEEPMODE_MAINTAINTIMER
- *     The sleep timer clock sources remain running.  The RC is always
- *     running and the 32kHz XTAL depends on the board header.  Wakeup
- *     is possible from only GPIO.  System time is maintained.
- * - SLEEPMODE_NOTIMER
- *     The sleep timer clock sources (both RC and XTAL) are turned off.
- *     Wakeup is possible from only GPIO.  System time is lost.
  */
+#ifdef DOXYGEN_SHOULD_SKIP_THIS
 enum SleepModes
 #else
 typedef uint8_t SleepModes;
 enum
 #endif
 {
+  /**
+   * Everything is active and running.  In practice this mode is not
+   * used, but it is defined for completeness of information.
+   */
   SLEEPMODE_RUNNING = 0,
+  /**
+   * Oly the CPU is idled.  The rest of the chip continues runing
+   * normally.  The chip will wake from any interrupt.
+   */
   SLEEPMODE_IDLE = 1,
+  /**
+   * The sleep timer clock sources remain running.  The RC is always
+   * running and the 32kHz XTAL depends on the board header.  Wakeup
+   * is possible from both GPIO and the sleep timer.  System time
+   * is maintained.  The sleep timer is assumed to be configured
+   * properly for wake events.
+   */
   SLEEPMODE_WAKETIMER = 2,
+  /**
+   * The sleep timer clock sources remain running.  The RC is always
+   * running and the 32kHz XTAL depends on the board header.  Wakeup
+   * is possible from only GPIO.  System time is maintained.
+   */
   SLEEPMODE_MAINTAINTIMER = 3,
+  /**
+   * The sleep timer clock sources (both RC and XTAL) are turned off.
+   * Wakeup is possible from only GPIO.  System time is lost.
+   */
   SLEEPMODE_NOTIMER = 4,
 };
 
@@ -113,7 +122,7 @@ enum
  * be within 10us.  If the micro is running off of another type of oscillator
  * (e.g. RC) the timing accuracy will potentially be much worse.
  *
- * @param us  The specified time, in microseconds. 
+ * @param us  The specified time, in microseconds.
               Values should be between 1 and 65535 microseconds.
  */
 void halCommonDelayMicroseconds(uint16_t us);
@@ -122,17 +131,17 @@ void halCommonDelayMicroseconds(uint16_t us);
  *
  * This function will check whwther the user flash contains the bootloader
  * and if yes it will jump into it according to the user parameters.
- * 
  *
- * @param mode  The bootloader mode, 0 UART mode, 1 RF mode. All other
- * values are reserved
+ *
+ * @param mode     The bootloader mode, 0 UART mode, 1 RF mode. All other
+ *                 values are reserved
  * @param channel  The channel where the booloader will operate. 0 means
- * default channel (only vaild for RF mode).
- * @param panID  The panID where the booloader will operate. 0xFFFF means
- * default panID (only vaild for RF mode).
+ *                 default channel (only vaild for RF mode).
+ * @param panID    The panID where the booloader will operate. 0xFFFF means
+ *                 default panID (only vaild for RF mode).
  * @return An error code or it will never return.
  */
-StStatus halBootloaderStart(uint8_t mode, uint8_t channel, uint16_t panId);
+StStatus halBootloaderStart(uint8_t mode, uint8_t channel, uint16_t panID);
 
 #ifdef CORTEXM3_STM32F103
 #include "micro/cortexm3/stm32f103ret/micro-specific.h"
@@ -144,4 +153,4 @@ StStatus halBootloaderStart(uint8_t mode, uint8_t channel, uint16_t panId);
 #endif //MICRO_COMMON_H_
 
 /** @} END micro group  */
-  
+/** @} */

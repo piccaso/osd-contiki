@@ -36,7 +36,7 @@
       <moteinterface>org.contikios.cooja.mspmote.interfaces.SkyButton</moteinterface>
       <moteinterface>org.contikios.cooja.mspmote.interfaces.SkyFlash</moteinterface>
       <moteinterface>org.contikios.cooja.mspmote.interfaces.SkyCoffeeFilesystem</moteinterface>
-      <moteinterface>org.contikios.cooja.mspmote.interfaces.SkyByteRadio</moteinterface>
+      <moteinterface>org.contikios.cooja.mspmote.interfaces.Msp802154Radio</moteinterface>
       <moteinterface>org.contikios.cooja.mspmote.interfaces.MspSerial</moteinterface>
       <moteinterface>org.contikios.cooja.mspmote.interfaces.SkyLED</moteinterface>
       <moteinterface>org.contikios.cooja.mspmote.interfaces.MspDebugOutput</moteinterface>
@@ -59,7 +59,7 @@
       <moteinterface>org.contikios.cooja.mspmote.interfaces.SkyButton</moteinterface>
       <moteinterface>org.contikios.cooja.mspmote.interfaces.SkyFlash</moteinterface>
       <moteinterface>org.contikios.cooja.mspmote.interfaces.SkyCoffeeFilesystem</moteinterface>
-      <moteinterface>org.contikios.cooja.mspmote.interfaces.SkyByteRadio</moteinterface>
+      <moteinterface>org.contikios.cooja.mspmote.interfaces.Msp802154Radio</moteinterface>
       <moteinterface>org.contikios.cooja.mspmote.interfaces.MspSerial</moteinterface>
       <moteinterface>org.contikios.cooja.mspmote.interfaces.SkyLED</moteinterface>
       <moteinterface>org.contikios.cooja.mspmote.interfaces.MspDebugOutput</moteinterface>
@@ -196,7 +196,7 @@
     <location_y>-1</location_y>
   </plugin>
   <plugin>
-    SerialSocketServer
+    org.contikios.cooja.serialsocket.SerialSocketServer
     <mote_arg>0</mote_arg>
     <width>422</width>
     <z>1</z>

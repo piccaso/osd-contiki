@@ -42,56 +42,7 @@
 #include <stdint.h>
 #include "contiki.h"
 #include "contiki-net.h"
-
-
-/* Define which resources to include to meet memory constraints. */
-#define REST_RES_INFO 1
-#define REST_RES_DS1820 0
-#define REST_RES_DHT11 1
-#define REST_RES_DHT11TEMP 1
-#define REST_RES_LEDS 1
-#define REST_RES_TOGGLE 0
-#define REST_RES_BATTERY 1
-
-#include "erbium.h"
-
-#if REST_RES_DS1820
-#include "dev/ds1820.h"
-#endif
-#if REST_RES_DHT11
-#include "dev/dht11.h"
-uint16_t dht11_temp=0, dht11_hum=0;
-#endif
-
-#if defined (PLATFORM_HAS_BUTTON)
-#include "dev/button-sensor.h"
-#endif
-#if defined (PLATFORM_HAS_LEDS)
-#include "dev/leds.h"
-#endif
-#if defined (PLATFORM_HAS_TEMPERATURE)
-#include "dev/temperature-sensor.h"
-#endif
-#if defined (PLATFORM_HAS_BATTERY)
-#include "dev/battery-sensor.h"
-#endif
-#if defined (PLATFORM_HAS_SHT11)
-#include "dev/sht11-sensor.h"
-#endif
-
-
-/* For CoAP-specific example: not required for normal RESTful Web service. */
-#if WITH_COAP == 3
-#include "er-coap-03.h"
-#elif WITH_COAP == 7
-#include "er-coap-07.h"
-#elif WITH_COAP == 12
-#include "er-coap-12.h"
-#elif WITH_COAP == 13
-#include "er-coap-13.h"
-#else
-#warning "Erbium example without CoAP-specifc functionality"
-#endif /* CoAP-specific example */
+#include "rest-engine.h"
 
 #define DEBUG 0
 #if DEBUG
@@ -104,282 +55,46 @@ uint16_t dht11_temp=0, dht11_hum=0;
 #define PRINTLLADDR(addr)
 #endif
 
-
-/******************************************************************************/
-
-#if REST_RES_INFO
 /*
- * Resources are defined by the RESOURCE macro.
- * Signature: resource name, the RESTful methods it handles, and its URI path (omitting the leading slash).
+ * Resources to be activated need to be imported through the extern keyword.
+ * The build system automatically compiles the resources in the corresponding sub-directory.
  */
-RESOURCE(info, METHOD_GET, "info", "title=\"Info\";rt=\"text\"");
-
-/*
- * A handler function named [resource name]_handler must be implemented for each RESOURCE.
- * A buffer for the response payload is provided through the buffer pointer. Simple resources can ignore
- * preferred_size and offset, but must respect the REST_MAX_CHUNK_SIZE limit for the buffer.
- * If a smaller block size is requested for CoAP, the REST framework automatically splits the data.
- */
-void
-info_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
-{
-  char message[100];
-  int index = 0;
-  int length = 0; /*           |<-------->| */
-
-  /* Some data that has the length up to REST_MAX_CHUNK_SIZE. For more, see the chunk resource. */
-       // jSON Format
-     index += sprintf(message + index,"{\n \"version\" : \"V0.4.3\",\n");
-     index += sprintf(message + index," \"name\" : \"6lowpan-climate\"\n");
-     index += sprintf(message + index,"}\n");
-
-    length = strlen(message);
-    memcpy(buffer, message,length );
-
-  REST.set_header_content_type(response, REST.type.APPLICATION_JSON);
-  REST.set_response_payload(response, buffer, length);
-}
+ 
+#if defined (PLATFORM_HAS_INFO)
+extern resource_t res_info;
 #endif
 
-#if REST_RES_DS1820
-/* A simple getter example. Returns the reading from ds1820 sensor */
-#define DS1820_TEMP_LSB                0
-#define DS1820_TEMP_MSB                1
-#define DS1820_COUNT_REMAIN    6
-#define DS1820_COUNT_PER_C     7
-RESOURCE(ds1820, METHOD_GET, "s/temp", "title=\"Temperatur DS1820\";rt=\"temperature-c\"");
-void
-ds1820_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
-{
+#if PLATFORM_HAS_DHT11HUM
+#include "dev/dht11.h"
+extern resource_t res_dht11hum;
+extern uint16_t dht11_hum;
+#endif
 
-  char message[100];
-  int length = 0; /*           |<-------->| */
-  union temp_raw {
-         int16_t  s_int16;
-         uint16_t u_int16;
-  } temp_raw;
-  double temp_c;
-  int temp_integral;
-  int temp_centi;
+#if PLATFORM_HAS_DHT11TEMP
+#include "dev/dht11.h"
+extern resource_t res_dht11temp;
+extern uint16_t dht11_temp;
+#endif
 
-  const uint16_t *accept = NULL;
-  int num = REST.get_header_accept(request, &accept);
+#if defined (PLATFORM_HAS_DS1820)
+#include "dev/ds1820.h"
+extern resource_t res_ds1820;
+#endif
 
-  // temp = temp_read - 0.25°C + (count_per_c - count_remain) / count_per_c;
-  temp_raw.u_int16 = ds1820_ok[DS1820_TEMP_MSB] << 8 | ds1820_ok[DS1820_TEMP_LSB];
-  temp_c = temp_raw.s_int16 / 2.0
-          - 0.25
-          + ((double) ds1820_ok[DS1820_COUNT_PER_C] - (double) ds1820_ok[DS1820_COUNT_REMAIN])
-            / (double) ds1820_ok[DS1820_COUNT_PER_C];
-  temp_integral = (int) temp_c;
-  temp_centi = (int) (fabs (temp_c - (int) temp_c) * 100.0);
-
-  if ((num==0) || (num && accept[0]==REST.type.TEXT_PLAIN))
-  {
-    REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-    snprintf(message, REST_MAX_CHUNK_SIZE, "%d.%02d C", temp_integral, temp_centi);
-
-    length = strlen(message);
-    memcpy(buffer, message,length );
-
-    REST.set_response_payload(response, buffer, length);
-  }
-  else if (num && (accept[0]==REST.type.APPLICATION_JSON))
-  {
-    REST.set_header_content_type(response, REST.type.APPLICATION_JSON);
-    snprintf(message, REST_MAX_CHUNK_SIZE, "{\"temp\":\"%d.%02d\"}", temp_integral, temp_centi);
-
-    length = strlen(message);
-    memcpy(buffer, message,length );
-
-    REST.set_response_payload(response, buffer, length);
-  }
-  else
-  {
-    REST.set_response_status(response, REST.status.NOT_ACCEPTABLE);
-    REST.set_response_payload(response, (uint8_t *)"Supporting content-types text/plain and application/json", 56);
-  }
-}
-#endif //REST_RES_DS1820
-
-#if REST_RES_DHT11TEMP
-/*A simple getter example. Returns the reading from dhtxx sensor*/
-RESOURCE(dht11temp, METHOD_GET, "s/temp", "title=\"Temperatur DHTxx\";rt=\"temperature-c\"");
-void
-dht11temp_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
-{
-  char message[100];
-  int length = 0; /*           |<-------->| */
-
-  const uint16_t *accept = NULL;
-  int num = REST.get_header_accept(request, &accept);
-
-  if ((num==0) || (num && accept[0]==REST.type.TEXT_PLAIN))
-  {
-    REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-    snprintf(message, REST_MAX_CHUNK_SIZE, "%d.%02d",dht11_temp/100, dht11_temp % 100);
-
-    length = strlen(message);
-    memcpy(buffer, message,length );
-
-    REST.set_response_payload(response, buffer, length);
-  }
-  else if (num && (accept[0]==REST.type.APPLICATION_JSON))
-  {
-    REST.set_header_content_type(response, REST.type.APPLICATION_JSON);
-    snprintf(message, REST_MAX_CHUNK_SIZE, "{\"temp\":\"%d.%02d\"}",dht11_temp/100, dht11_temp % 100);
-
-    length = strlen(message);
-    memcpy(buffer, message,length );
-
-    REST.set_response_payload(response, buffer, length);
-  }
-  else
-  {
-    REST.set_response_status(response, REST.status.NOT_ACCEPTABLE);
-    REST.set_response_payload(response, (uint8_t *)"Supporting content-types text/plain and application/json", 56);
-  }	
-}
-#endif //REST_RES_DHT11TEMP
-
-#if REST_RES_DHT11
-/*A simple getter example. Returns the reading from dhtxx sensor*/
-RESOURCE(dht11, METHOD_GET, "s/hum", "title=\"Humidity DHTxx\";rt=\"humidity-%\"");
-void
-dht11_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
-{
-  char message[100];
-  int length = 0; /*           |<-------->| */
-
-  const uint16_t *accept = NULL;
-  int num = REST.get_header_accept(request, &accept);
-
-  if ((num==0) || (num && accept[0]==REST.type.TEXT_PLAIN))
-  {
-    REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-    snprintf(message, REST_MAX_CHUNK_SIZE, "%d.%02d",dht11_hum/100, dht11_hum % 100);
-
-    length = strlen(message);
-    memcpy(buffer, message,length );
-
-    REST.set_response_payload(response, buffer, length);
-  }
-  else if (num && (accept[0]==REST.type.APPLICATION_JSON))
-  {
-    REST.set_header_content_type(response, REST.type.APPLICATION_JSON);
-    snprintf(message, REST_MAX_CHUNK_SIZE, "{\"hum\":\"%d.%02d\"}",dht11_hum/100, dht11_hum % 100);
-
-    length = strlen(message);
-    memcpy(buffer, message,length );
-
-    REST.set_response_payload(response, buffer, length);
-  }
-  else
-  {
-    REST.set_response_status(response, REST.status.NOT_ACCEPTABLE);
-    REST.set_response_payload(response, (uint8_t *)"Supporting content-types text/plain and application/json", 56);
-  }
-}
-#endif //REST_RES_DHT11
-
-/******************************************************************************/
 #if defined (PLATFORM_HAS_LEDS)
-/******************************************************************************/
-#if REST_RES_LEDS
-/*A simple actuator example, depending on the color query parameter and post variable mode, corresponding led is activated or deactivated*/
-RESOURCE(leds, METHOD_POST | METHOD_PUT , "a/leds", "title=\"LEDs: ?color=r|g|b, POST/PUT mode=on|off\";rt=\"Control\"");
-
-void
-leds_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
-{
-  size_t len = 0;
-  const char *color = NULL;
-  const char *mode = NULL;
-  uint8_t led = 0;
-  int success = 1;
-
-  if ((len=REST.get_query_variable(request, "color", &color))) {
-    PRINTF("color %.*s\n", len, color);
-
-    if (strncmp(color, "r", len)==0) {
-      led = LEDS_RED;
-    } else if(strncmp(color,"g", len)==0) {
-      led = LEDS_GREEN;
-    } else if (strncmp(color,"b", len)==0) {
-      led = LEDS_BLUE;
-    } else {
-      success = 0;
-    }
-  } else {
-    success = 0;
-  }
-
-  if (success && (len=REST.get_post_variable(request, "mode", &mode))) {
-    PRINTF("mode %s\n", mode);
-
-    if (strncmp(mode, "on", len)==0) {
-      leds_on(led);
-    } else if (strncmp(mode, "off", len)==0) {
-      leds_off(led);
-    } else {
-      success = 0;
-    }
-  } else {
-    success = 0;
-  }
-
-  if (!success) {
-    REST.set_response_status(response, REST.status.BAD_REQUEST);
-  }
-}
+#include "dev/leds.h"
+extern resource_t res_leds;
 #endif
 
-/******************************************************************************/
-#if REST_RES_TOGGLE
-/* A simple actuator example. Toggles the red led */
-RESOURCE(toggle, METHOD_GET | METHOD_PUT | METHOD_POST, "a/toggle", "title=\"Red LED\";rt=\"Control\"");
-void
-toggle_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
-{
-  leds_toggle(LEDS_RED);
-}
+#if PLATFORM_HAS_BATTERY
+#include "dev/battery-sensor.h"
+extern resource_t res_battery;
 #endif
-#endif /* PLATFORM_HAS_LEDS */
 
-/******************************************************************************/
-#if REST_RES_BATTERY && defined (PLATFORM_HAS_BATTERY)
-/* A simple getter example. Returns the reading from light sensor with a simple etag */
-RESOURCE(battery, METHOD_GET, "s/battery", "title=\"Battery status\";rt=\"battery-mV\"");
-void
-battery_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
-{
-  int battery = battery_sensor.value(0);
-
-  const uint16_t *accept = NULL;
-  int num = REST.get_header_accept(request, &accept);
-
-  if ((num==0) || (num && accept[0]==REST.type.TEXT_PLAIN))
-  {
-    REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-    snprintf((char *)buffer, REST_MAX_CHUNK_SIZE, "%d.%02d", battery/1000, battery % 1000);
-
-    REST.set_response_payload(response, (uint8_t *)buffer, strlen((char *)buffer));
-  }
-  else if (num && (accept[0]==REST.type.APPLICATION_JSON))
-  {
-    REST.set_header_content_type(response, REST.type.APPLICATION_JSON);
-    snprintf((char *)buffer, REST_MAX_CHUNK_SIZE, "{'battery':%d.%02d}", battery/1000, battery % 1000);
-
-    REST.set_response_payload(response, buffer, strlen((char *)buffer));
-  }
-  else
-  {
-    REST.set_response_status(response, REST.status.NOT_ACCEPTABLE);
-    const char *msg = "Supporting content-types text/plain and application/json";
-    REST.set_response_payload(response, msg, strlen(msg));
-  }
-}
-#endif /* PLATFORM_HAS_BATTERY */
+#if PLATFORM_HAS_RADIO
+#include "dev/radio-sensor.h"
+extern resource_t res_radio;
+#endif
 
 void 
 hw_init()
@@ -387,11 +102,10 @@ hw_init()
 #if defined (PLATFORM_HAS_LEDS)
  leds_off(LEDS_RED);
 #endif
-#if REST_RES_DS1820
+#if PLATFORM_HAS_DS1820
   ds1820_temp();
 #endif
-#if REST_RES_DHT11
-  //DHT_INIT();
+#if PLATFORM_HAS_DHT11HUM
   DHT_Read_Data(&dht11_temp, &dht11_hum);
 #endif
 }
@@ -404,7 +118,7 @@ AUTOSTART_PROCESSES(&rest_server_example);
 PROCESS_THREAD(rest_server_example, ev, data)
 {
   static struct etimer ds_periodic_timer;
-#if REST_RES_DS1820
+#if PLATFORM_HAS_DS1820
   static struct etimer ds_read_timer;
 #endif
 
@@ -437,33 +151,28 @@ PROCESS_THREAD(rest_server_example, ev, data)
   rest_init_engine();
 
   /* Activate the application-specific resources. */
-#if REST_RES_DS1820
-  rest_activate_resource(&resource_ds1820);
+#if PLATFORM_HAS_DS1820
+  rest_activate_resource(&res_ds1820,"s/temp");
 #endif
-#if REST_RES_DHT11
-  rest_activate_resource(&resource_dht11);
+#if PLATFORM_HAS_DHT11HUM
+  rest_activate_resource(&res_dht11hum,"s/hum");
 #endif
-#if REST_RES_DHT11TEMP
-  rest_activate_resource(&resource_dht11temp);
+#if PLATFORM_HAS_DHT11TEMP
+  rest_activate_resource(&res_dht11temp,"s/temp");
 #endif
-#if REST_RES_INFO
-  rest_activate_resource(&resource_info);
+#if PLATFORM_HAS_INFO
+  rest_activate_resource(&res_info,"info");
 #endif
-#if defined (PLATFORM_HAS_LEDS)
-#if REST_RES_LEDS
-  rest_activate_resource(&resource_leds);
-#endif
-#if REST_RES_TOGGLE
-  rest_activate_resource(&resource_toggle);
-#endif
+#if PLATFORM_HAS_LEDS
+  rest_activate_resource(&res_leds,"a/leds");
 #endif /* PLATFORM_HAS_LEDS */
-#if defined (PLATFORM_HAS_TEMPERATURE) && REST_RES_TEMPERATURE
+#if PLATFORM_HAS_TEMPERATURE
   SENSORS_ACTIVATE(temperature_sensor);
   rest_activate_resource(&resource_temperature);
 #endif
-#if defined (PLATFORM_HAS_BATTERY) && REST_RES_BATTERY
+#if PLATFORM_HAS_BATTERY
   SENSORS_ACTIVATE(battery_sensor);
-  rest_activate_resource(&resource_battery);
+  rest_activate_resource(&res_battery,"s/battery");
 #endif
 
   /* Define application-specific events here. */
@@ -478,17 +187,16 @@ PROCESS_THREAD(rest_server_example, ev, data)
     if(etimer_expired(&ds_periodic_timer)) {
         PRINTF("Periodic\n");
         etimer_reset(&ds_periodic_timer);
-#if REST_RES_DHT11
-    //    DHT_Read_Data(&dht11_temp, &dht11_hum);
+#if PLATFORM_HAS_DHT11HUM
         DHT_Read_Data(&dht11_temp, &dht11_hum);
 #endif
-#if REST_RES_DS1820
+#if PLATFORM_HAS_DS1820
         if(ds1820_convert()){
           etimer_set(&ds_read_timer, READ_TIME);
         }
 #endif
     }
-#if REST_RES_DS1820
+#if PLATFORM_HAS_DS1820
     if(etimer_expired(&ds_read_timer)) {
         PRINTF("DS1820_Read\n");
         ds1820_read();

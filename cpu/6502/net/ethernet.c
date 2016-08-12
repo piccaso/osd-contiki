@@ -47,14 +47,18 @@ struct {
   struct uip_eth_addr ethernet_address;
   uint8_t             *buffer;
   uint16_t            buffer_size;
-  void __fastcall__   (* init)(uint16_t reg);
+  char                jmp_init;
+  char __fastcall__   (* init)(uint16_t reg);
+  char                jmp_poll;
   uint16_t            (* poll)(void);
+  char                jmp_send;
   void __fastcall__   (* send)(uint16_t len);
+  char                jmp_exit;
   void                (* exit)(void);
 } *module;
 
 /*---------------------------------------------------------------------------*/
-void CC_FASTCALL
+void
 ethernet_init(struct ethernet_config *config)
 {
   static const char signature[4] = {0x65, 0x74, 0x68, 0x01};
@@ -97,7 +101,10 @@ ethernet_init(struct ethernet_config *config)
 
   module->buffer = uip_buf;
   module->buffer_size = UIP_BUFSIZE;
-  module->init(config->addr);
+  if(module->init(config->addr)) {
+    log_message(config->name, ": No hardware");
+    error_exit();
+  }
 
   uip_setethaddr(module->ethernet_address);
 }

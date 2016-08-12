@@ -34,7 +34,8 @@
 
 //#define PLATFORM_HAS_LEDS    1
 //#define PLATFORM_HAS_BUTTON  1
-#define PLATFORM_HAS_T4_SERVO  1
+#define PLATFORM_HAS_SERVO
+//#define PLATFORM_HAS_T4_SERVO  1
 #define PLATFORM_HAS_BATTERY 1
 
 #define SICSLOWPAN_CONF_FRAG	1
@@ -45,11 +46,6 @@
 
 /* Some platforms have weird includes. */
 #undef IEEE802154_CONF_PANID
-
-/* Disabling RDC for demo purposes. Core updates often require more memory. */
-/* For projects, optimize memory and enable RDC again. */
-// #undef NETSTACK_CONF_RDC
-//#define NETSTACK_CONF_RDC     nullrdc_driver
 
 /* Increase rpl-border-router IP-buffer when using more than 64. */
 #undef REST_MAX_CHUNK_SIZE
@@ -83,22 +79,5 @@
 #define COAP_LINK_FORMAT_FILTERING      0
 */
 
-/* Save some memory for the sky platform. */
-/*
-#undef NBR_TABLE_CONF_MAX_NEIGHBORS
-#define NBR_TABLE_CONF_MAX_NEIGHBORS     10
-#undef UIP_CONF_MAX_ROUTES
-#define UIP_CONF_MAX_ROUTES   10
-*/
 
-/* Reduce 802.15.4 frame queue to save RAM. */
-/*
-#undef QUEUEBUF_CONF_NUM
-#define QUEUEBUF_CONF_NUM       4
-*/
-
-/*
-#undef SICSLOWPAN_CONF_FRAG
-#define SICSLOWPAN_CONF_FRAG	1
-*/
 #endif /* PROJECT_ERBIUM_CONF_H_ */

@@ -36,16 +36,14 @@
  *         Niclas Finne <nfi@sics.se>
  *         Joakim Eriksson <joakime@sics.se>
  *         Nicolas Tsiftes <nvt@sics.se>
- *         Andreas Reder <andreas@reder.eu>
  */
 
 #include "contiki.h"
 #include "contiki-lib.h"
 #include "contiki-net.h"
-#include "net/uip.h"
-#include "net/uip-ds6.h"
+#include "net/ip/uip.h"
+#include "net/ipv6/uip-ds6.h"
 #include "net/rpl/rpl.h"
-#include "net/mac/framer-802154.h"
 
 #include "net/netstack.h"
 #include "dev/slip.h"
@@ -59,33 +57,9 @@
 #include <ctype.h>
 
 #define DEBUG DEBUG_FULL
-#include "net/uip-debug.h"
-
-#include "erbium.h"
-/* For CoAP-specific example: not required for normal RESTful Web service. */
-#if WITH_COAP == 3
-#include "er-coap-03.h"
-#elif WITH_COAP == 7
-#include "er-coap-07.h"
-#else
-#warning "Erbium example without CoAP-specifc functionality"
-#endif /* CoAP-specific example */
-
-
+#include "net/ip/uip-debug.h"
 
 #define MAX_SENSORS 4
-
-#define IPV6_ADDR_LEN	40
-#define RPL_TABLE_SIZE 25000
-char rpl_table[RPL_TABLE_SIZE];
-int rpl_table_len;
-
-
-
-uint16_t dag_id[] = {0x1111, 0x1100, 0, 0, 0, 0, 0, 0x0011};
-
-extern uip_ds6_nbr_t uip_ds6_nbr_cache[];
-extern uip_ds6_route_t uip_ds6_routing_table[];
 
 extern long slip_sent;
 extern long slip_received;
@@ -106,87 +80,139 @@ extern const char *slip_config_ipaddr;
 CMD_HANDLERS(border_router_cmd_handler);
 
 PROCESS(border_router_process, "Border router process");
-PROCESS(rest_server, "Erbium Coap Server");
 
-AUTOSTART_PROCESSES(&border_router_process,&border_router_cmd_process, &rest_server);
+#if WEBSERVER==0
+/* No webserver */
+AUTOSTART_PROCESSES(&border_router_process,&border_router_cmd_process);
+#elif WEBSERVER>1
+/* Use an external webserver application */
+#include "webserver-nogui.h"
+AUTOSTART_PROCESSES(&border_router_process,&border_router_cmd_process,
+		    &webserver_nogui_process);
+#else
+/* Use simple webserver with only one page */
+#include "httpd-simple.h"
+PROCESS(webserver_nogui_process, "Web server");
+PROCESS_THREAD(webserver_nogui_process, ev, data)
+{
+  PROCESS_BEGIN();
 
+  httpd_init();
 
-static int create_ipv6_addr_str(const uip_ipaddr_t *addr, char *ptr){
-  int len = 0;
-  int i, f;
+  while(1) {
+    PROCESS_WAIT_EVENT_UNTIL(ev == tcpip_event);
+    httpd_appcall(data);
+  }
+
+  PROCESS_END();
+}
+AUTOSTART_PROCESSES(&border_router_process,&border_router_cmd_process,
+		    &webserver_nogui_process);
+
+static const char *TOP = "<html><head><title>ContikiRPL</title></head><body>\n";
+static const char *BOTTOM = "</body></html>\n";
+static char buf[128];
+static int blen;
+#define ADD(...) do {                                                   \
+    blen += snprintf(&buf[blen], sizeof(buf) - blen, __VA_ARGS__);      \
+  } while(0)
+/*---------------------------------------------------------------------------*/
+static void
+ipaddr_add(const uip_ipaddr_t *addr)
+{
   uint16_t a;
-        
-  uip_debug_ipaddr_print(addr);
+  int i, f;
   for(i = 0, f = 0; i < sizeof(uip_ipaddr_t); i += 2) {
     a = (addr->u8[i] << 8) + addr->u8[i + 1];
     if(a == 0 && f >= 0) {
-      if(f++ == 0){
-	  ptr[len++] = ':';
-	  ptr[len++] = ':';
+      if(f++ == 0 && sizeof(buf) - blen >= 2) {
+        buf[blen++] = ':';
+        buf[blen++] = ':';
       }
     } else {
       if(f > 0) {
-	f = -1;
-      } else if(i > 0) {
-	  ptr[len++] = ':';
+        f = -1;
+      } else if(i > 0 && blen < sizeof(buf)) {
+        buf[blen++] = ':';
       }
-      len += snprintf(&ptr[len], IPV6_ADDR_LEN - len, "%x", a);
+      ADD("%x", a);
     }
-  }  
-  return len;
+  }
+}
+/*---------------------------------------------------------------------------*/
+static
+PT_THREAD(generate_routes(struct httpd_state *s))
+{
+  static int i;
+  static uip_ds6_route_t *r;
+  static uip_ds6_nbr_t *nbr;
+
+  PSOCK_BEGIN(&s->sout);
+
+  SEND_STRING(&s->sout, TOP);
+
+  blen = 0;
+  ADD("Neighbors<pre>");
+  for(nbr = nbr_table_head(ds6_neighbors);
+      nbr != NULL;
+      nbr = nbr_table_next(ds6_neighbors, nbr)) {
+    ipaddr_add(&nbr->ipaddr);
+    ADD("\n");
+    if(blen > sizeof(buf) - 45) {
+      SEND_STRING(&s->sout, buf);
+      blen = 0;
+    }
+  }
+
+  ADD("</pre>Routes<pre>");
+  SEND_STRING(&s->sout, buf);
+  blen = 0;
+  for(r = uip_ds6_route_head();
+      r != NULL;
+      r = uip_ds6_route_next(r)) {
+    ipaddr_add(&r->ipaddr);
+    ADD("/%u (via ", r->length);
+    ipaddr_add(uip_ds6_route_nexthop(r));
+    if(r->state.lifetime < 600) {
+      ADD(") %lus\n", (unsigned long)r->state.lifetime);
+    } else {
+      ADD(")\n");
+    }
+    SEND_STRING(&s->sout, buf);
+    blen = 0;
+  }
+  ADD("</pre>");
+//if(blen > 0) {
+  SEND_STRING(&s->sout, buf);
+// blen = 0;
+//}
+
+  if(sensor_count > 0) {
+    ADD("</pre>Sensors<pre>");
+    SEND_STRING(&s->sout, buf);
+    blen = 0;
+    for(i = 0; i < sensor_count; i++) {
+      ADD("%s\n", sensors[i]);
+      SEND_STRING(&s->sout, buf);
+      blen = 0;
+    }
+    ADD("</pre>");
+    SEND_STRING(&s->sout, buf);
+  }
+
+
+  SEND_STRING(&s->sout, BOTTOM);
+
+  PSOCK_END(&s->sout);
+}
+/*---------------------------------------------------------------------------*/
+httpd_simple_script_t
+httpd_simple_get_script(const char *name)
+{
+  return generate_routes;
 }
 
-/*---------------------------------------------------------------------------*/
-//create JSON RPL Table
-static void 
-generate_rpl_table(){
-  char a[IPV6_ADDR_LEN];
-  int addresses;
-  static uip_ds6_route_t *r;
-  int i;
-  
-  rpl_table_len = 0;
-  // Start JSON 
-  rpl_table_len += snprintf(&rpl_table[rpl_table_len], RPL_TABLE_SIZE - rpl_table_len, "{\n");
-  
-  // add title
-  rpl_table_len += snprintf(&rpl_table[rpl_table_len], RPL_TABLE_SIZE - rpl_table_len, "\"title\": \"RPL Table\",\n");
-  
-  rpl_table_len += snprintf(&rpl_table[rpl_table_len], RPL_TABLE_SIZE - rpl_table_len, "\"Neighbors\": [ ");
-  
-  addresses = 0;
-  for(i = 0; i < UIP_DS6_NBR_NB; i++) {
-    if(uip_ds6_nbr_cache[i].isused) {
-      addresses += 1;
-      create_ipv6_addr_str(&uip_ds6_nbr_cache[i].ipaddr, a);
-      rpl_table_len += snprintf(&rpl_table[rpl_table_len], RPL_TABLE_SIZE - rpl_table_len, "\"%s\", ", a);
-    }
-  }
-  if(addresses > 0){
-    //delete last coma
-    rpl_table_len -= 2;
-  }
-  rpl_table_len += snprintf(&rpl_table[rpl_table_len], RPL_TABLE_SIZE - rpl_table_len, "],\n");
-  
-  rpl_table_len += snprintf(&rpl_table[rpl_table_len], RPL_TABLE_SIZE - rpl_table_len, "\"Routes\": [ ");
-  
-  addresses = 0;
-  for(r = uip_ds6_route_list_head(); r != NULL; r = list_item_next(r)) {
-    addresses += 1;
-    create_ipv6_addr_str(&r->ipaddr, a);
-    rpl_table_len += snprintf(&rpl_table[rpl_table_len], RPL_TABLE_SIZE - rpl_table_len, "\"%s via ", a);
-    create_ipv6_addr_str(&r->nexthop, a);
-    rpl_table_len += snprintf(&rpl_table[rpl_table_len], RPL_TABLE_SIZE - rpl_table_len, "%s\", ", a);
-  }
-  if(addresses > 0){
-    //delete last coma
-    rpl_table_len -= 2;
-  }
-  rpl_table_len += snprintf(&rpl_table[rpl_table_len], RPL_TABLE_SIZE - rpl_table_len, "]\n");
-  
-  // End JSON
-  rpl_table_len += snprintf(&rpl_table[rpl_table_len], RPL_TABLE_SIZE - rpl_table_len, "}\n");
-}
+#endif /* WEBSERVER */
 
 /*---------------------------------------------------------------------------*/
 static void
@@ -217,7 +243,7 @@ void
 border_router_set_mac(const uint8_t *data)
 {
   memcpy(uip_lladdr.addr, data, sizeof(uip_lladdr.addr));
-  rimeaddr_set_node_addr((rimeaddr_t *)uip_lladdr.addr);
+  linkaddr_set_node_addr((linkaddr_t *)uip_lladdr.addr);
 
   /* is this ok - should instead remove all addresses and
      add them back again - a bit messy... ?*/
@@ -262,6 +288,7 @@ border_router_set_sensors(const char *data, int len)
 static void
 set_prefix_64(const uip_ipaddr_t *prefix_64)
 {
+  rpl_dag_t *dag;
   uip_ipaddr_t ipaddr;
   memcpy(&prefix, prefix_64, 16);
   memcpy(&ipaddr, prefix_64, 16);
@@ -269,12 +296,17 @@ set_prefix_64(const uip_ipaddr_t *prefix_64)
   prefix_set = 1;
   uip_ds6_set_addr_iid(&ipaddr, &uip_lladdr);
   uip_ds6_addr_add(&ipaddr, 0, ADDR_AUTOCONF);
+
+  dag = rpl_set_root(RPL_DEFAULT_INSTANCE, &ipaddr);
+  if(dag != NULL) {
+    rpl_set_prefix(dag, &prefix, 64);
+    PRINTF("created a new RPL dag\n");
+  }
 }
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(border_router_process, ev, data)
 {
   static struct etimer et;
-  rpl_dag_t *dag;
 
   PROCESS_BEGIN();
   prefix_set = 0;
@@ -308,12 +340,6 @@ PROCESS_THREAD(border_router_process, ev, data)
     }
   }
 
-  dag = rpl_set_root(RPL_DEFAULT_INSTANCE,(uip_ip6addr_t *)dag_id);
-  if(dag != NULL) {
-    rpl_set_prefix(dag, &prefix, 64);
-    PRINTF("created a new RPL dag\n");
-  }
-
 #if DEBUG
   print_local_addresses();
 #endif
@@ -323,191 +349,11 @@ PROCESS_THREAD(border_router_process, ev, data)
   NETSTACK_MAC.off(1);
 
   while(1) {
-  //  etimer_set(&et, CLOCK_SECOND * 2);
- //   PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
-    PROCESS_YIELD();
+    etimer_set(&et, CLOCK_SECOND * 2);
+    PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
     /* do anything here??? */
   }
 
   PROCESS_END();
 }
 /*---------------------------------------------------------------------------*/
-
-/*
-* Resources are defined by the RESOURCE macro.
-* Signature: resource name, the RESTful methods it handles, and its URI path (omitting the leading slash).
-*/
-RESOURCE(rpl, METHOD_GET, "rpl", "title=\"rpl routing table\";rt=\"application/json\"");
-
-/*
-* A handler function named [resource name]_handler must be implemented for each RESOURCE.
-* A buffer for the response payload is provided through the buffer pointer. Simple resources can ignore
-* preferred_size and offset, but must respect the REST_MAX_CHUNK_SIZE limit for the buffer.
-* If a smaller block size is requested for CoAP, the REST framework automatically splits the data.
-*/
-
-void
-rpl_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
-{
-  int32_t strpos = 0;
-  int i;
-
-  if(*offset == 0){
-      generate_rpl_table();
-  }
-  
-  /* Check the offset for boundaries of the resource data. */
-  if (*offset>=rpl_table_len)
-  {
-    REST.set_response_status(response, REST.status.BAD_OPTION);
-    /* A block error message should not exceed the minimum block size (16). */
-
-    const char *error_msg = "BlockOutOfScope";
-    REST.set_response_payload(response, error_msg, strlen(error_msg));
-    return;
-  }
-
-  /* Generate data until reaching CHUNKS_TOTAL. */
-  while (strpos<preferred_size)
-  {
-	  for( i = 0; i < (preferred_size-strpos+1); i++){
-      buffer[strpos] = rpl_table[strpos + *offset];
-      strpos += 1;
-    }
-  }
-
-  /* snprintf() does not adjust return value if truncated by size. */
-  if (strpos > preferred_size)
-  {
-    strpos = preferred_size;
-  }
-
-  /* Truncate if above CHUNKS_TOTAL bytes. */
-  if (*offset+(int32_t)strpos > rpl_table_len)
-  {
-    strpos = rpl_table_len - *offset;
-  }
-
-  REST.set_response_payload(response, buffer, strpos);
-
-  /* IMPORTANT for chunk-wise resources: Signal chunk awareness to REST engine. */
-  *offset += strpos;
-
-  /* Signal end of resource representation. */
-  if (*offset>=rpl_table_len)
-  {
-    *offset = -1;
-  }
-}
-
-
-RESOURCE(info, METHOD_GET, "info", "title=\"Info\";rt=\"application/json\"");
-
-/*
-* A handler function named [resource name]_handler must be implemented for each RESOURCE.
-* A buffer for the response payload is provided through the buffer pointer. Simple resources can ignore
-* preferred_size and offset, but must respect the REST_MAX_CHUNK_SIZE limit for the buffer.
-* If a smaller block size is requested for CoAP, the REST framework automatically splits the data.
-*/
-void
-info_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
-{
-  char message[100];
-  int index = 0;
-  int length = 0; /* |<-------->| */
-
-  /* Some data that has the length up to REST_MAX_CHUNK_SIZE. For more, see the chunk resource. */
-     index += sprintf(message + index,"{\n \"version\" : \"V0.2\",\n");
-     index += sprintf(message + index," \"name\" : \"native coap border router\"\n");
-     index += sprintf(message + index,"}\n");
-
-    length = strlen(message);
-    memcpy(buffer, message,length );
-
-  REST.set_header_content_type(response, REST.type.APPLICATION_JSON);
-  REST.set_response_payload(response, buffer, length);
-}
-
-
-RESOURCE(network, METHOD_GET | METHOD_PUT, "network", "title=\"osd configs\"; rt=\"application/json\"");
-void
-network_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
-{
-  char message[100];
-  uint8_t buf[10];
-  int index = 0;
-  int length = 0; /* |<-------->| */
-  const char* strg;
-  uint16_t panid;
-  
-  if((length = REST.get_post_variable(request, "panid", &strg))){
-	// parse panid
-    panid = (uint16_t)atoi(strg);
-    // set framer panid
-    framer_802154_set_panid(panid);
-    //set radio panid
-    buf[0] = '?';
-    buf[1] = 'P';
-    buf[2] = panid >> 8;
-    buf[3] = panid;
-    write_to_slip(buf, 4);
-
-  }else if((length = REST.get_post_variable(request, "channel", &strg))){
-    REST.set_response_status(response, REST.status.BAD_REQUEST);
-    return;
-  }
-  
-  index += sprintf(message + index, "{\n");
-  index += sprintf(message + index, "\"panid\": \"%u\",\n", framer_802154_get_panid());
-  //index += sprintf(message + index, "\"channel\": \"%u\",\n", //params_get_channel());
-  index += sprintf(message + index, "}\n");
-
-  length = strlen(message);
-  memcpy(buffer, message,length );
-
-  REST.set_header_content_type(response, REST.type.APPLICATION_JSON);
-  REST.set_response_payload(response, buffer, length);
-}
-
-
-/*---------------------------------------------------------------------------*/
-
-PROCESS_THREAD(rest_server, ev, data)
-{
-
-  PROCESS_BEGIN();
-
-
-
-  PRINTF("Starting Erbium Coap Server\n");
-
-#ifdef RF_CHANNEL
-  PRINTF("RF channel: %u\n", RF_CHANNEL);
-#endif
-#ifdef IEEE802154_PANID
-  PRINTF("PAN ID: 0x%04X\n", IEEE802154_PANID);
-#endif
-
-  PRINTF("uIP buffer: %u\n", UIP_BUFSIZE);
-  PRINTF("LL header: %u\n", UIP_LLH_LEN);
-  PRINTF("IP+UDP header: %u\n", UIP_IPUDPH_LEN);
-  PRINTF("REST max chunk: %u\n", REST_MAX_CHUNK_SIZE);
-
-  /* Initialize the REST engine. */
-  rest_init_engine();
-
-  /* Activate the application-specific resources. */
-  rest_activate_resource(&resource_rpl);
-  rest_activate_resource(&resource_network);
-  rest_activate_resource(&resource_info);
-
-  while(1) {
-    PROCESS_YIELD();
-  }
-
-
-  PROCESS_END();
-}
-
-
-

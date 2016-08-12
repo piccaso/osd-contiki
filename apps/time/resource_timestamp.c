@@ -15,41 +15,36 @@
 #include <stdlib.h>
 #include <string.h>
 #include "contiki.h"
-#include "time.h"
+#include "xtime.h"
 #include "time_resource.h"
 #include "jsonparse.h"
-/* Only coap 13 for now */
-#include "er-coap-13.h"
+#include "er-coap.h"
 #include "generic_resource.h"
 
-void timestamp_from_string (const char *name, const char *s)
+int timestamp_from_string (const char *name, const char *uri, const char *s)
 {
-  struct timeval tv;
+  struct xtimeval tv;
   // FIXME: Platform has no strtoll (long long)?
   tv.tv_sec = strtol (s, NULL, 10);
-  settimeofday (&tv, NULL);
+  xsettimeofday (&tv, NULL);
+  return 0;
 }
 
 size_t
-timestamp_to_string (const char *name, uint8_t is_json, char *buf, size_t bsize)
+timestamp_to_string (const char *name, const char *uri, char *buf, size_t bsize)
 {
-  struct timeval tv;
-  char *fmt = "%ld";
-  if (is_json) {
-    fmt = "\"%ld\"";
-  }
-  gettimeofday (&tv, NULL);
+  struct xtimeval tv;
+  xgettimeofday (&tv, NULL);
   // FIXME: Platform doesn't seem to support long long printing
   // We get empty string
-  return snprintf (buf, bsize, fmt, (long)tv.tv_sec);
+  return snprintf (buf, bsize, "%ld", (long)tv.tv_sec);
 }
 
 GENERIC_RESOURCE
   ( timestamp
-  , METHOD_GET | METHOD_PUT
-  , "clock/timestamp"
   , Time
   , s
+  , 1
   , timestamp_from_string
   , timestamp_to_string
   );

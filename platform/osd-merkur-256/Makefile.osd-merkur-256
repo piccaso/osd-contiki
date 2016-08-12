@@ -1,0 +1,91 @@
+CONTIKI_TARGET_DIRS = . dev apps net loader dev/arduino
+
+CONTIKI_CORE=contiki-main
+CONTIKI_TARGET_MAIN = ${CONTIKI_CORE}.o
+CONTIKI_TARGET_SOURCEFILES += contiki-main.c params.c node-id.c
+#Needed for slip
+CONTIKI_TARGET_SOURCEFILES += led.c sensors.c slip_uart0.c slip.c leds-arch.c
+CONTIKI_TARGET_SOURCEFILES += temperature-sensor.c adc.c
+#Needed for Button
+CONTIKI_TARGET_SOURCEFILES += button-sensor.c
+# i2c Master
+#CONTIKI_TARGET_SOURCEFILES += i2c.c
+#Needed for DHT11 humidity sensor
+CONTIKI_TARGET_SOURCEFILES += dht11.c
+#Needed for DS18S20 temperature sensor
+CONTIKI_TARGET_SOURCEFILES += ds1820.c
+#Needed for Battery test
+CONTIKI_TARGET_SOURCEFILES += battery-sensor.c batmon.c
+#Needed for PIR
+CONTIKI_TARGET_SOURCEFILES += pir-sensor.c
+#Needed for OPTRIAC
+CONTIKI_TARGET_SOURCEFILES += optriac-sensor.c
+#Needed for SERVO
+CONTIKI_TARGET_SOURCEFILES += servo.c servo-sensor.c
+#Needed for Timer4 Servo
+#CONTIKI_TARGET_SOURCEFILES += t4-servo.c t4-servo-sensor.c
+#Needed for Relay 1 to 4
+CONTIKI_TARGET_SOURCEFILES += relay.c relay-sensor.c
+# Arduino
+CONTIKI_TARGET_SOURCEFILES += wiring_digital.c
+CONTIKI_TARGET_SOURCEFILES += new.cpp twi.c Wire.cpp WMath.cpp
+CONTIKI_TARGET_SOURCEFILES += Print.cpp Stream.cpp WString.cpp
+# guh Source Files
+# Smart Grid Ready Interface
+CONTIKI_TARGET_SOURCEFILES += sg-ready.c
+
+CONTIKIAVR=$(CONTIKI)/cpu/avr
+
+CONTIKIBOARD=.
+BOOTLOADER_START = 0x3E000
+CONTIKI_PLAT_DEFS = -DF_CPU=16000000UL -DAUTO_CRC_PADDING=2 -DPLAT_TIMER=5
+
+MCU=atmega256rfr2
+
+#AVRDUDE_PROGRAMMER=jtag2
+AVRDUDE_PROGRAMMER=stk500v2
+
+# For usb devices, you may either use PORT=usb, or (e.g. if you have
+# more than one programmer connected) you can use the following trick to
+# find out the serial number:
+#
+# The example is for an JTAGICE mkII used to program an atmega256:
+# avrdude -v -P usb:xxxx -c jtag2 -p atmega256
+# AVRDUDE_PORT=usb:00B000000D79
+# For serial devices with bootloader we also use the AVRDUDE_PORT setting:
+AVRDUDE_PORT=/dev/ttyUSB0
+# Only needed for serial devices, use empty setting for other
+# programmers
+AVRDUDE_BAUD_OPTION=-b 57600
+
+# Additional avrdude options
+# First some flash options:
+# Verify off is -V
+# Erase is -e
+# No-Erase (needed by our stk500 variant) is -D
+# Note that it really doesn't turn off erase: It doesn't issue an
+# explicit erase command (which is not implemented) but the bootloader
+# *always* does an implicit erase when programming.
+AVRDUDE_FLASH_OPTIONS=-D
+AVRDUDE_OPTIONS=$(AVRDUDE_BAUD_OPTION) $(AVRDUDE_FLASH_OPTIONS)
+AVRDUDE_MCU=m256rfr2
+
+#debug
+# CFLAGS  += -save-temps
+# Bootloader bonsai
+# LDFLAGS  += -save-temps
+# For newer bootloaders we have a jump table at the end of the bootloader
+# section: guhRF Bootloader MAC Address
+BOOTLOADER_GET_MAC=0x0003ff80
+
+LDFLAGS  += -Wl,--defsym,bootloader_get_mac=$(BOOTLOADER_GET_MAC)
+
+
+include $(CONTIKIAVR)/Makefile.avr
+include $(CONTIKIAVR)/radio/Makefile.radio
+
+MODULES += core/net/mac  core/net core/net/mac/sicslowmac \
+    core/net/mac/contikimac core/net/llsec \
+#     core/net/ipv6 core/net/ipv4 core/net/ip \
+#     core/net/rime \
+#     core/net/rpl \

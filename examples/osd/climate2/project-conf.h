@@ -32,14 +32,20 @@
 #ifndef PROJECT_ERBIUM_CONF_H_
 #define PROJECT_ERBIUM_CONF_H_
 
+#define PLATFORM_HAS_INFO 1
 #define PLATFORM_HAS_BATTERY 1
 //#define PLATFORM_HAS_DS1820  1
-#define PLATFORM_HAS_DHT11   1
+#define PLATFORM_HAS_DHT11HUM   1
+#define PLATFORM_HAS_DHT11TEMP   1
 #define PLATFORM_HAS_LEDS    1
 
 
 /* Some platforms have weird includes. */
 #undef IEEE802154_CONF_PANID
+
+
+/* Save energy */
+#define RDC_CONF_PT_YIELD_OFF
 
 /* Disabling RDC for demo purposes. Core updates often require more memory. */
 /* For projects, optimize memory and enable RDC again. */

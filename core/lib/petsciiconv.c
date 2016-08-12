@@ -72,16 +72,15 @@ static unsigned char ascii2petscii[128] = {
   0x58,0x59,0x5a,0xdb,0xdd,0xdd,0x5e,0xdf,
 };
 
-static unsigned int i;
-static unsigned char *ptr;
-
 /*-----------------------------------------------------------------------------------*/
 void
 petsciiconv_toascii(char *buf, unsigned int len)
 {
-  static char c;
+  unsigned int i;
+  char *ptr;
+  char c;
   
-  ptr = (unsigned char*)buf;
+  ptr = buf;
   for(i = len; i > 0; --i) {
     c = *ptr;
     if(c == 0x0a) {
@@ -108,7 +107,10 @@ petsciiconv_toascii(char *buf, unsigned int len)
 void
 petsciiconv_topetscii(char *buf, unsigned int len)
 {
-  ptr = (unsigned char *)buf;
+  unsigned int i;
+  char *ptr;
+
+  ptr = buf;
   for(i = len; i > 0; --i) {
     *ptr = ascii2petscii[*ptr & 0x7f];
     ++ptr;

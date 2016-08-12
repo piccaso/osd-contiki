@@ -1,5 +1,5 @@
 /**
- * \addtogroup cc2538
+ * \addtogroup cc2538dk
  * @{
  *
  * \file
@@ -34,11 +34,19 @@ typedef uint32_t uip_stats_t;
 
 /*
  * rtimer.h typedefs rtimer_clock_t as unsigned short. We need to define
- * RTIMER_CLOCK_LT to override this
+ * RTIMER_CLOCK_DIFF to override this
  */
 typedef uint32_t rtimer_clock_t;
-#define RTIMER_CLOCK_LT(a,b)     ((int32_t)((a)-(b)) < 0)
+#define RTIMER_CLOCK_DIFF(a,b)     ((int32_t)((a)-(b)))
 /** @} */
+/*---------------------------------------------------------------------------*/
+#define TSCH_CONF_HW_FRAME_FILTERING	0
+
+/* 352us from calling transmit() until the SFD byte has been sent */
+#define RADIO_DELAY_BEFORE_TX     ((unsigned)US_TO_RTIMERTICKS(352))
+/* 192us as in datasheet but ACKs are not always received, so adjusted to 250us */
+#define RADIO_DELAY_BEFORE_RX     ((unsigned)US_TO_RTIMERTICKS(250))
+#define RADIO_DELAY_BEFORE_DETECT 0
 /*---------------------------------------------------------------------------*/
 /**
  * \name Serial Boot Loader Backdoor configuration
@@ -47,6 +55,24 @@ typedef uint32_t rtimer_clock_t;
  */
 #ifndef FLASH_CCA_CONF_BOOTLDR_BACKDOOR
 #define FLASH_CCA_CONF_BOOTLDR_BACKDOOR	1 /**<Enable the boot loader backdoor */
+#endif
+
+#ifndef FLASH_CCA_CONF_BOOTLDR_BACKDOOR_PORT_A_PIN
+#define FLASH_CCA_CONF_BOOTLDR_BACKDOOR_PORT_A_PIN 3 /**< Pin PA_3 (Select button) activates the boot loader */
+#endif
+
+#ifndef FLASH_CCA_CONF_BOOTLDR_BACKDOOR_ACTIVE_HIGH
+#define FLASH_CCA_CONF_BOOTLDR_BACKDOOR_ACTIVE_HIGH 0 /**< A logic low level activates the boot loader */
+#endif
+/** @} */
+/*---------------------------------------------------------------------------*/
+/**
+ * \name Watchdog Timer configuration
+ *
+ * @{
+ */
+#ifndef WATCHDOG_CONF_ENABLE
+#define WATCHDOG_CONF_ENABLE	      1 /**< Enable the watchdog timer */
 #endif
 /** @} */
 /*---------------------------------------------------------------------------*/
@@ -104,18 +130,51 @@ typedef uint32_t rtimer_clock_t;
 #define UART_CONF_ENABLE            1 /**< Enable/Disable UART I/O */
 #endif
 
-#ifndef UART_CONF_BAUD_RATE
-#define UART_CONF_BAUD_RATE    115200 /**< Default baud rate */
+#ifndef UART0_CONF_BAUD_RATE
+#define UART0_CONF_BAUD_RATE   115200 /**< Default UART0 baud rate */
+#endif
+
+#ifndef UART1_CONF_BAUD_RATE
+#define UART1_CONF_BAUD_RATE   115200 /**< Default UART1 baud rate */
 #endif
 
 #ifndef SLIP_ARCH_CONF_USB
 #define SLIP_ARCH_CONF_USB          0 /**< SLIP over UART by default */
 #endif
+
 #ifndef CC2538_RF_CONF_SNIFFER_USB
 #define CC2538_RF_CONF_SNIFFER_USB  0 /**< Sniffer out over UART by default */
 #endif
+
 #ifndef DBG_CONF_USB
 #define DBG_CONF_USB                0 /**< All debugging over UART by default */
+#endif
+
+#ifndef SERIAL_LINE_CONF_UART
+#define SERIAL_LINE_CONF_UART       0 /**< UART to use with serial line */
+#endif
+
+#if !SLIP_ARCH_CONF_USB
+#ifndef SLIP_ARCH_CONF_UART
+#define SLIP_ARCH_CONF_UART         0 /**< UART to use with SLIP */
+#endif
+#endif
+
+#if !CC2538_RF_CONF_SNIFFER_USB
+#ifndef CC2538_RF_CONF_SNIFFER_UART
+#define CC2538_RF_CONF_SNIFFER_UART 0 /**< UART to use with sniffer */
+#endif
+#endif
+
+#if !DBG_CONF_USB
+#ifndef DBG_CONF_UART
+#define DBG_CONF_UART               0 /**< UART to use for debugging */
+#endif
+#endif
+
+#ifndef UART1_CONF_UART
+#define UART1_CONF_UART             0 /**< UART to use for examples relying on
+                                           the uart1_* API */
 #endif
 
 /* Turn off example-provided putchars */
@@ -185,8 +244,32 @@ typedef uint32_t rtimer_clock_t;
  * this
  */
 #if SLIP_ARCH_CONF_ENABLED
-#define DBG_CONF_SLIP_MUX (SLIP_ARCH_CONF_USB==DBG_CONF_USB)
+#define DBG_CONF_SLIP_MUX (SLIP_ARCH_CONF_USB == DBG_CONF_USB && \
+                           (SLIP_ARCH_CONF_USB || \
+                            SLIP_ARCH_CONF_UART == DBG_CONF_UART))
 #endif
+
+/*
+ * Automatic detection of whether a specific UART is in use
+ */
+#define UART_IN_USE_BY_SERIAL_LINE(u) (SERIAL_LINE_CONF_UART == (u))
+#define UART_IN_USE_BY_SLIP(u)        (SLIP_ARCH_CONF_ENABLED && \
+                                       !SLIP_ARCH_CONF_USB && \
+                                       SLIP_ARCH_CONF_UART == (u))
+#define UART_IN_USE_BY_RF_SNIFFER(u)  (CC2538_RF_CONF_SNIFFER && \
+                                       !CC2538_RF_CONF_SNIFFER_USB && \
+                                       CC2538_RF_CONF_SNIFFER_UART == (u))
+#define UART_IN_USE_BY_DBG(u)         (!DBG_CONF_USB && DBG_CONF_UART == (u))
+#define UART_IN_USE_BY_UART1(u)       (UART1_CONF_UART == (u))
+
+#define UART_IN_USE(u) ( \
+  UART_CONF_ENABLE && \
+  (UART_IN_USE_BY_SERIAL_LINE(u) || \
+   UART_IN_USE_BY_SLIP(u) || \
+   UART_IN_USE_BY_RF_SNIFFER(u) || \
+   UART_IN_USE_BY_DBG(u) || \
+   UART_IN_USE_BY_UART1(u)) \
+)
 /** @} */
 /*---------------------------------------------------------------------------*/
 /* board.h assumes that basic configuration is done */
@@ -198,11 +281,11 @@ typedef uint32_t rtimer_clock_t;
  * @{
  */
 #ifndef NETSTACK_CONF_NETWORK
-#if UIP_CONF_IPV6
+#if NETSTACK_CONF_WITH_IPV6
 #define NETSTACK_CONF_NETWORK sicslowpan_driver
 #else
 #define NETSTACK_CONF_NETWORK rime_driver
-#endif /* UIP_CONF_IPV6 */
+#endif /* NETSTACK_CONF_WITH_IPV6 */
 #endif /* NETSTACK_CONF_NETWORK */
 
 #ifndef NETSTACK_CONF_MAC
@@ -218,7 +301,6 @@ typedef uint32_t rtimer_clock_t;
 #define NULLRDC_802154_AUTOACK_HW               1
 
 /* Configure ContikiMAC for when it's selected */
-#define CONTIKIMAC_CONF_WITH_CONTIKIMAC_HEADER  0
 #define CONTIKIMAC_CONF_WITH_PHASE_OPTIMIZATION 0
 #define WITH_FAST_SLEEP                         1
 
@@ -227,8 +309,12 @@ typedef uint32_t rtimer_clock_t;
 #endif
 
 #ifndef NETSTACK_CONF_FRAMER
+#if NETSTACK_CONF_WITH_IPV6
 #define NETSTACK_CONF_FRAMER  framer_802154
-#endif
+#else /* NETSTACK_CONF_WITH_IPV6 */
+#define NETSTACK_CONF_FRAMER  contikimac_framer
+#endif /* NETSTACK_CONF_WITH_IPV6 */
+#endif /* NETSTACK_CONF_FRAMER */
 
 #define NETSTACK_CONF_RADIO   cc2538_rf_driver
 /** @} */
@@ -297,7 +383,7 @@ typedef uint32_t rtimer_clock_t;
  */
 /* RF Config */
 #ifndef IEEE802154_CONF_PANID
-#define IEEE802154_CONF_PANID           0x5449 /**< Default PAN ID: TI */
+#define IEEE802154_CONF_PANID           0xABCD
 #endif
 
 #ifndef CC2538_RF_CONF_CHANNEL
@@ -324,11 +410,11 @@ typedef uint32_t rtimer_clock_t;
  */
 
 /* Don't let contiki-default-conf.h decide if we are an IPv6 build */
-#ifndef UIP_CONF_IPV6
-#define UIP_CONF_IPV6                        0
+#ifndef NETSTACK_CONF_WITH_IPV6
+#define NETSTACK_CONF_WITH_IPV6                        0
 #endif
 
-#if UIP_CONF_IPV6
+#if NETSTACK_CONF_WITH_IPV6
 /* Addresses, Sizes and Interfaces */
 /* 8-byte addresses here, 2 otherwise */
 #define LINKADDR_CONF_SIZE                   8
@@ -352,14 +438,10 @@ typedef uint32_t rtimer_clock_t;
 #define UIP_CONF_ROUTER                      1
 #endif
 
-#ifndef UIP_CONF_IPV6_RPL
-#define UIP_CONF_IPV6_RPL                    1
-#endif
-
 #define UIP_CONF_ND6_SEND_RA                 0
 #define UIP_CONF_IP_FORWARD                  0
 #define RPL_CONF_STATS                       0
-#define RPL_CONF_MAX_DAG_ENTRIES             1
+
 #ifndef RPL_CONF_OF
 #define RPL_CONF_OF rpl_mrhof
 #endif
@@ -398,8 +480,8 @@ typedef uint32_t rtimer_clock_t;
 #define SICSLOWPAN_CONF_MAX_ADDR_CONTEXTS    1
 #ifndef SICSLOWPAN_CONF_ADDR_CONTEXT_0
 #define SICSLOWPAN_CONF_ADDR_CONTEXT_0 { \
-  addr_contexts[0].prefix[0] = 0xaa; \
-  addr_contexts[0].prefix[1] = 0xaa; \
+  addr_contexts[0].prefix[0] = UIP_DS6_DEFAULT_PREFIX_0; \
+  addr_contexts[0].prefix[1] = UIP_DS6_DEFAULT_PREFIX_1; \
 }
 #endif
 
@@ -409,7 +491,7 @@ typedef uint32_t rtimer_clock_t;
 #define QUEUEBUF_CONF_NUM                    8
 #endif
 /*---------------------------------------------------------------------------*/
-#else /* UIP_CONF_IPV6 */
+#else /* NETSTACK_CONF_WITH_IPV6 */
 /* Network setup for non-IPv6 (rime). */
 #define UIP_CONF_IP_FORWARD                  1
 
@@ -423,7 +505,25 @@ typedef uint32_t rtimer_clock_t;
 #define QUEUEBUF_CONF_NUM                    8
 #endif
 
-#endif /* UIP_CONF_IPV6 */
+#endif /* NETSTACK_CONF_WITH_IPV6 */
+/** @} */
+/*---------------------------------------------------------------------------*/
+/**
+ * \name Security
+ *
+ * @{
+ */
+#ifndef CRYPTO_CONF_INIT
+#define CRYPTO_CONF_INIT        1 /**< Whether to init cryptoprocessor */
+#endif
+
+#ifndef AES_128_CONF
+#define AES_128_CONF            cc2538_aes_128_driver /**< AES-128 driver */
+#endif
+
+#ifndef CCM_STAR_CONF
+#define CCM_STAR_CONF           cc2538_ccm_star_driver /**< AES-CCM* driver */
+#endif
 /** @} */
 /*---------------------------------------------------------------------------*/
 

@@ -54,9 +54,10 @@ import org.contikios.cooja.Plugin;
 import org.contikios.cooja.ProjectConfig;
 import org.contikios.cooja.Simulation;
 import org.contikios.cooja.dialogs.CompileContiki;
-import org.contikios.cooja.dialogs.MessageList;
-import org.contikios.cooja.dialogs.MessageList.MessageContainer;
+import org.contikios.cooja.dialogs.MessageContainer;
+import org.contikios.cooja.dialogs.MessageListUI;
 import org.contikios.cooja.plugins.ScriptRunner;
+import org.contikios.cooja.PluginType;
 
 public class ExecuteJAR {
   private static Logger logger = Logger.getLogger(ExecuteJAR.class);
@@ -187,7 +188,15 @@ public class ExecuteJAR {
 
     logger.info("Starting simulation");
     Cooja.setLookAndFeel();
-    Cooja.quickStartSimulationConfig(new File(executeDir, SIMCONFIG_FILENAME), false, null);
+    Simulation sim = Cooja.quickStartSimulationConfig(new File(executeDir, SIMCONFIG_FILENAME), false, null);
+    if (sim != null){
+        /* Set simulation speed to maximum and start simulation */
+        sim.setSpeedLimit(null);
+        sim.startSimulation();
+    } else {
+        logger.fatal("Cannot load simulation, aborting");
+        System.exit(1);
+    }
   }
 
   /**
@@ -222,18 +231,18 @@ public class ExecuteJAR {
       logger.info("Checking mote types: '" + Cooja.getDescriptionOf(t.getClass()) + "'");
     }
 
-    /* Check dependencies: Contiki Test Editor */
-    boolean hasTestEditor = false;
+    /* Check dependencies: Contiki Control Plugin */
+    boolean hasController = false;
     for (Plugin startedPlugin : gui.getStartedPlugins()) {
-      if (startedPlugin instanceof ScriptRunner) {
-        hasTestEditor = true;
-        break;
+      int pluginType = startedPlugin.getClass().getAnnotation(PluginType.class).value();
+      if (pluginType == PluginType.SIM_CONTROL_PLUGIN) {
+        hasController = true;
       }
     }
-    logger.info("Checking that Contiki Test Editor exists: " + hasTestEditor);
-    if (!hasTestEditor) {
+    logger.info("Checking that Contiki Control Plugin exists: " + hasController);
+    if (!hasController) {
       throw new RuntimeException(
-          "The simulation needs at least one active Contiki Test Editor plugin.\n" +
+          "The simulation needs at least one active control plugin.\n" +
           "The plugin is needed to control the non-visualized simulation."
       );
     }
@@ -284,7 +293,8 @@ public class ExecuteJAR {
 
     /* Unpacking COOJA core JARs */
     String[] coreJARs = new String[] {
-        "tools/cooja/lib/jdom.jar", "tools/cooja/lib/log4j.jar", "tools/cooja/dist/cooja.jar"
+        "tools/cooja/lib/jdom.jar", "tools/cooja/lib/log4j.jar",
+            "tools/cooja/dist/cooja.jar", "tools/cooja/lib/jsyntaxpane.jar"
     };
     for (String jar: coreJARs) {
       File jarFile = new File(Cooja.getExternalToolsSetting("PATH_CONTIKI"), jar);
@@ -405,7 +415,7 @@ public class ExecuteJAR {
     }
 
     logger.info("Building executable JAR: " + outputFile);
-    MessageList errors = new MessageList();
+    MessageListUI errors = new MessageListUI();
     try {
       CompileContiki.compile(
           "jar cfm " + outputFile.getAbsolutePath() + " manifest.tmp .",

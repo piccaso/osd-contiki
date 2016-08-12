@@ -37,8 +37,13 @@ high-level configuration macros may be set:
     - Purpose: Set the Maximum Transfer Unit size.
 
 - CONNECTIONS
-    - Default: 10
+    - Default: 2
     - Purpose: Set the maximum number of concurrent TCP connections.
+
+- ETHERNET
+    - Default: N/A
+    - Purpose: Link Ethernet driver statically instead of loading it dynamically
+      using the network configuration file.
 
 - WITH_LOGGING
     - Default: 0
@@ -61,9 +66,13 @@ high-level configuration macros may be set:
     - Default: 0
     - Purpose: Enable UDP support and initialize resolver process on startup.
 
+- WITH_80COL
+    - Default: 0
+    - Purpose: Enable 80 column screen.
+
 - WITH_GUI
     - Default: 0
-    - Purpose: Initialize the the CTK process on startup.
+    - Purpose: Initialize the CTK process on startup.
 
 - WITH_MOUSE
     - Default: 0

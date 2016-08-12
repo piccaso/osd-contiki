@@ -1,0 +1,47 @@
+#######################################
+# Syntax Coloring Map For BH1750FVI
+#######################################
+
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+
+BH1750FVI             KEYWORD1
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+
+sampleIsFresh         KEYWORD2
+getLightLevel         KEYWORD2 
+retrieveSample        KEYWORD2
+startOngoingSamples   KEYWORD2 
+startSingleSample     KEYWORD2
+setSensitivity        KEYWORD2
+startSingleSample     KEYWORD2
+printDebug            KEYWORD2
+
+#######################################
+# Constants (LITERAL1)
+#######################################
+
+BH_AddrL      LITERAL1
+BH_AddrH      LITERAL1
+BH_PowOf      LITERAL1
+BH_PowOn      LITERAL1
+BH_Reset      LITERAL1
+BH_NoMod      LITERAL1
+BH_EasyH      LITERAL1
+BH_ContH      LITERAL1
+BH_Conth      LITERAL1
+BH_ContL      LITERAL1
+BH_SingH      LITERAL1
+BH_Singh      LITERAL1
+BH_SingL      LITERAL1
+BH_MTrHb      LITERAL1
+BH_MTrLb      LITERAL1
+BH_MinSv      LITERAL1
+BH_MaxSv      LITERAL1
+BH_DefSv      LITERAL1
+BH_FastD      LITERAL1
+BH_SlowD      LITERAL1

@@ -17,9 +17,8 @@
 #ifndef led_pwm_h
 #define led_pwm_h
 #include "contiki.h"
-#include "erbium.h"
 
-extern resource_t resource_led_pwm;
+extern resource_t res_led_pwm;
 extern void led_pwm_init (void);
 
 #endif // led_pwm_h

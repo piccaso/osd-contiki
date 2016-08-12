@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Ralf Schlatterbeck Open Source Consulting
+ * Copyright (c) 2014-15, Ralf Schlatterbeck Open Source Consulting
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -46,8 +46,7 @@
 #include <string.h>
 #include "contiki.h"
 #include "jsonparse.h"
-/* Only coap 13 for now */
-#include "er-coap-13.h"
+#include "er-coap.h"
 #include "generic_resource.h"
 
 /* Error-handling macro */
@@ -106,97 +105,138 @@ json_parse_variable
   return 0;
 }
 
-void generic_handler
+static const char *get_uri (void *request)
+{
+  static char buf [MAX_URI_STRING_LENGTH];
+  const char *uri;
+  size_t len = coap_get_header_uri_path (request, &uri);
+  if (len > sizeof (buf) - 1) {
+    *buf = '\0';
+  } else {
+    strncpy (buf, uri, len);
+    buf [len] = '\0';
+  }
+  return buf;
+}
+
+void generic_get_handler
   ( void *request
   , void *response
   , uint8_t *buffer
   , uint16_t preferred_size
   , int32_t *offset
   , char *name
-  , void (*from_str)(const char *name, const char *s)
-  , size_t (*to_str)(const char *name, uint8_t is_json, char *buf, size_t bsize)
+  , int is_str
+  , size_t (*to_str)(const char *name, const char *uri, char *buf, size_t bsize)
+  )
+{
+  int success = 1;
+  char temp [MAX_GET_STRING_LENGTH];
+  size_t len = 0;
+  unsigned int accept = -1;
+  const char *uri = get_uri (request);
+
+  REST.get_header_accept (request, &accept);
+  if (  accept != -1
+     && accept != REST.type.TEXT_PLAIN
+     && accept != REST.type.APPLICATION_JSON
+     )
+  {
+    success = 0;
+    REST.set_response_status (response, REST.status.NOT_ACCEPTABLE);
+    return;
+  }
+
+  // TEXT format
+  if (accept == REST.type.APPLICATION_JSON) {
+    len += snprintf
+      ( temp + len
+      , sizeof (temp) - len
+      , "{\n \"%s\" : %s"
+      , name
+      , is_str ? "\"" : ""
+      );
+    if (len > sizeof (temp)) {
+      success = 0;
+      goto out;
+    }
+    len += to_str (name, uri, temp + len, sizeof (temp) - len);
+    if (len > sizeof (temp)) {
+      success = 0;
+      goto out;
+    }
+    len += snprintf 
+      ( temp + len
+      , sizeof (temp) - len
+      , "%s\n}\n"
+      , is_str ? "\"" : ""
+      );
+    if (len > sizeof (temp)) {
+      success = 0;
+      goto out;
+    }
+  } else { // TEXT Format
+    len += to_str (name, uri, temp + len, sizeof (temp) - len);
+    if (len > sizeof (temp)) {
+      success = 0;
+      goto out;
+    }
+    len += snprintf (temp + len, sizeof (temp) - len, "\n");
+    if (len > sizeof (temp)) {
+      success = 0;
+      goto out;
+    }
+  }
+  memcpy (buffer, temp, len);
+  REST.set_header_content_type (response, accept);
+  REST.set_response_payload (response, buffer, len);
+out :
+  if (!success) {
+    REST.set_response_status (response, REST.status.BAD_REQUEST);
+  }
+}
+
+void generic_put_handler
+  ( void *request
+  , void *response
+  , uint8_t *buffer
+  , uint16_t preferred_size
+  , int32_t *offset
+  , char *name
+  , int (*from_str)(const char *name, const char *uri, const char *s)
   )
 {
   int success = 1;
   char temp [100];
-  int i = 0;
   size_t len = 0;
-  int n_acc = 0;
   const uint8_t  *bytes  = NULL;
-  const uint16_t *accept = NULL;
-  uint16_t a_ctype = REST.type.APPLICATION_JSON;
-  uint16_t c_ctype = REST.get_header_content_type (request);
+  unsigned int c_ctype;
+  const char *uri = get_uri (request);
+  REST.get_header_content_type (request, &c_ctype);
 
-  /* Seems like accepted type is currently unsupported? */
-  n_acc = REST.get_header_accept (request, &accept);
-  for (i=0; i<n_acc; i++) {
-    if  (  accept [i] == REST.type.TEXT_PLAIN
-        || accept [i] == REST.type.APPLICATION_JSON
-        )
-    {
-      a_ctype = accept [i];
-      break;
-    }
-  }
-
-  switch(REST.get_method_type(request)) {
-    case METHOD_GET:
-      // TEXT format
-      if (a_ctype == REST.type.TEXT_PLAIN) {
-        len += to_str (name, 0, temp + len, sizeof (temp) - len);
-        if (len > sizeof (temp)) {
-          success = 0;
-          break;
-        }
-        len += snprintf (temp + len, sizeof (temp) - len, "\n");
-        if (len > sizeof (temp)) {
-          success = 0;
-          break;
-        }
-      } else { // jSON Format
-        len += snprintf
-          (temp + len, sizeof (temp) - len, "{\n \"%s\" : ", name);
-        if (len > sizeof (temp)) {
-          success = 0;
-          break;
-        }
-        len += to_str (name, 1, temp + len, sizeof (temp) - len);
-        if (len > sizeof (temp)) {
-          success = 0;
-          break;
-        }
-        len += snprintf (temp + len, sizeof (temp) - len, "\n}\n");
-        if (len > sizeof (temp)) {
-          success = 0;
-          break;
-        }
-      }
-      memcpy (buffer, temp, len);
-      REST.set_header_content_type (response, a_ctype);
-      REST.set_response_payload (response, buffer, len);
-      break;
-    case METHOD_PUT:
-      if (from_str && (len = coap_get_payload(request, &bytes))) {
-        if (c_ctype == REST.type.TEXT_PLAIN) {
-          temp [sizeof (temp) - 1] = 0;
-          strncpy (temp, (const char *)bytes, MIN (len, sizeof (temp) - 1));
-        } else { // jSON Format
-          if (json_parse_variable (bytes, len, name, temp, sizeof (temp)) < 0) {
-            success = 0;
-            break;
-          }
-        }
-        from_str (name, temp);
-        REST.set_response_status(response, REST.status.CHANGED);
-      } else {
+  if (from_str && (len = coap_get_payload (request, &bytes))) {
+    if (c_ctype == REST.type.TEXT_PLAIN) {
+      int l = MIN (len, sizeof (temp) - 1);
+      temp [sizeof (temp) - 1] = 0;
+      strncpy (temp, (const char *)bytes, l);
+      temp [l] = 0;
+    } else { // jSON Format
+      if (json_parse_variable (bytes, len, name, temp, sizeof (temp)) < 0) {
         success = 0;
+        goto out;
       }
-      break;
-    default:
+    }
+    if (from_str (name, uri, temp) < 0) {
       success = 0;
+    } else {
+      REST.set_response_status (response, REST.status.CHANGED);
+    }
+  } else {
+    success = 0;
   }
+out:
   if (!success) {
-    REST.set_response_status(response, REST.status.BAD_REQUEST);
+    REST.set_response_status (response, REST.status.BAD_REQUEST);
   }
 }
 

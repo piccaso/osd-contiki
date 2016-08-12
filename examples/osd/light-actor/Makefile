@@ -1,21 +1,17 @@
-all: er-example-server
-# use this target explicitly if requried: er-plugtest-server
+EXE=er-example-server
 
-
-# variable for this Makefile
-# configure CoAP implementation (3|7|12|13) (er-coap-07 also supports CoAP draft 08)
-WITH_COAP=13
-
-# for some platforms
-UIP_CONF_IPV6=1
-# IPv6 make config disappeared completely
-CFLAGS += -DUIP_CONF_IPV6=1
+all: $(EXE)
 
 CONTIKI=../../..
+
+# Contiki IPv6 configuration
+CONTIKI_WITH_IPV6 = 1
+
 CFLAGS += -DPROJECT_CONF_H=\"project-conf.h\"
 
 # pcintkey
 PROJECT_SOURCEFILES += pcintkey.c
+PROJECT_SOURCEFILES += statusled.c
 
 # variable for Makefile.include
 ifneq ($(TARGET), minimal-net)
@@ -34,64 +30,28 @@ endif
 # linker optimizations
 SMALL=1
 
-# REST framework, requires WITH_COAP
-ifeq ($(WITH_COAP), 13)
-${info INFO: compiling with CoAP-13}
-CFLAGS += -DWITH_COAP=13
-CFLAGS += -DREST=coap_rest_implementation
-CFLAGS += -DUIP_CONF_TCP=0
-APPS += er-coap-13
-else ifeq ($(WITH_COAP), 12)
-${info INFO: compiling with CoAP-12}
-CFLAGS += -DWITH_COAP=12
-CFLAGS += -DREST=coap_rest_implementation
-CFLAGS += -DUIP_CONF_TCP=0
-APPS += er-coap-12
-else ifeq ($(WITH_COAP), 7)
-${info INFO: compiling with CoAP-08}
-CFLAGS += -DWITH_COAP=7
-CFLAGS += -DREST=coap_rest_implementation
-CFLAGS += -DUIP_CONF_TCP=0
-APPS += er-coap-07
-else ifeq ($(WITH_COAP), 3)
-${info INFO: compiling with CoAP-03}
-CFLAGS += -DWITH_COAP=3
-CFLAGS += -DREST=coap_rest_implementation
-CFLAGS += -DUIP_CONF_TCP=0
-APPS += er-coap-03
-else
-${info INFO: compiling with HTTP}
-CFLAGS += -DWITH_HTTP
-CFLAGS += -DREST=http_rest_implementation
-CFLAGS += -DUIP_CONF_TCP=1
-APPS += er-http-engine
-endif
-
-APPS += erbium
-
-# optional rules to get assembly
-#CUSTOM_RULE_C_TO_OBJECTDIR_O = 1
-#CUSTOM_RULE_S_TO_OBJECTDIR_O = 1
+# REST Engine shall use Erbium CoAP implementation
+APPS += er-coap
+APPS += rest-engine
+APPS += json json-resource
 
 include $(CONTIKI)/Makefile.include
 
-# optional rules to get assembly
-#$(OBJECTDIR)/%.o: asmdir/%.S
-#	$(CC) $(CFLAGS) -MMD -c $< -o $@
-#	@$(FINALIZE_DEPENDENCY)
-#
-#asmdir/%.S: %.c
-#	$(CC) $(CFLAGS) -MMD -S $< -o $@
-
-# border router rules
-$(CONTIKI)/tools/tunslip6:	$(CONTIKI)/tools/tunslip6.c
+$(CONTIKI)/tools/tunslip6:      $(CONTIKI)/tools/tunslip6.c
 	(cd $(CONTIKI)/tools && $(MAKE) tunslip6)
 
-connect-router:	$(CONTIKI)/tools/tunslip6
+connect-router: $(CONTIKI)/tools/tunslip6
 	sudo $(CONTIKI)/tools/tunslip6 aaaa::1/64
 
-connect-router-cooja:	$(CONTIKI)/tools/tunslip6
+connect-router-cooja:   $(CONTIKI)/tools/tunslip6
 	sudo $(CONTIKI)/tools/tunslip6 -a 127.0.0.1 aaaa::1/64
 
 connect-minimal:
 	sudo ip address add fdfd::1/64 dev tap0
+
+avr-size: $(EXE).$(TARGET).sz
+
+flash: $(EXE).$(TARGET).u $(EXE).$(TARGET).eu
+
+.PHONY: flash avr-size
+.PRECIOUS: $(EXE).$(TARGET).hex $(EXE).$(TARGET).eep

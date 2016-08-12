@@ -33,28 +33,20 @@
  * \author
  *         Niclas Finne <nfi@sics.se>
  *         Joakim Eriksson <joakime@sics.se>
- *         Andreas Reder
  */
 #include "contiki.h"
-#include "net/uip.h"
-#include "net/uip-ds6.h"
+#include "net/ip/uip.h"
+#include "net/ipv6/uip-ds6.h"
 #include "dev/slip.h"
 #include <string.h>
 #include "net/netstack.h"
 #include "net/packetbuf.h"
 
 #define DEBUG DEBUG_NONE
-#include "net/uip-debug.h"
+#include "net/ip/uip-debug.h"
 #include "cmd.h"
 #include "slip-radio.h"
 #include "packetutils.h"
-
-#include <avr/eeprom.h>
-#include "watchdog.h"
-#include "params.h"
-
-extern uint16_t eemem_panid EEMEM;
-extern uint8_t eemem_channel[] EEMEM;
 
 #ifdef SLIP_RADIO_CONF_SENSORS
 extern const struct slip_radio_sensors SLIP_RADIO_CONF_SENSORS;
@@ -67,7 +59,15 @@ uint8_t packet_ids[16];
 int packet_pos;
 
 static int slip_radio_cmd_handler(const uint8_t *data, int len);
+
+#if CONTIKI_TARGET_NOOLIBERRY
+int cmd_handler_rf230(const uint8_t *data, int len);
+#elif CONTIKI_TARGET_ECONOTAG
+int cmd_handler_mc1322x(const uint8_t *data, int len);
+#else /* Leave CC2420 as default */
 int cmd_handler_cc2420(const uint8_t *data, int len);
+#endif /* CONTIKI_TARGET */
+
 /*---------------------------------------------------------------------------*/
 #ifdef CMD_CONF_HANDLERS
 CMD_HANDLERS(CMD_CONF_HANDLERS);
@@ -99,8 +99,6 @@ static int
 slip_radio_cmd_handler(const uint8_t *data, int len)
 {
   int i;
-  uint16_t panid;
-  
   if(data[0] == '!') {
     /* should send out stuff to the radio - ignore it as IP */
     /* --- s e n d --- */
@@ -127,7 +125,7 @@ slip_radio_cmd_handler(const uint8_t *data, int len)
 
       /* parse frame before sending to get addresses, etc. */
       no_framer.parse();
-      NETSTACK_MAC.send(packet_sent, &packet_ids[packet_pos]);
+      NETSTACK_LLSEC.send(packet_sent, &packet_ids[packet_pos]);
 
       packet_pos++;
       if(packet_pos >= sizeof(packet_ids)) {
@@ -148,14 +146,7 @@ slip_radio_cmd_handler(const uint8_t *data, int len)
       uip_len = 10;
       cmd_send(uip_buf, uip_len);
       return 1;
-    } else if( data[1] == 'P'){
-		panid = (data[2] << 8) + data[3];
-		printf("slip-radio: received change panid command, new panid %u\n", panid);
-		cli();
-		eeprom_write_word(&eemem_panid, panid);
-		sei();
-		//watchdog_reboot();
-	}
+    }
   }
   return 0;
 }
@@ -171,7 +162,7 @@ slip_input_callback(void)
 {
   PRINTF("SR-SIN: %u '%c%c'\n", uip_len, uip_buf[0], uip_buf[1]);
   cmd_input(uip_buf, uip_len);
-  uip_len = 0;
+  uip_clear_buf();
 }
 /*---------------------------------------------------------------------------*/
 static void

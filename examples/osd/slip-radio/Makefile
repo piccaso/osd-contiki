@@ -1,12 +1,12 @@
-CONTIKI_PROJECT=slip-radio
-all: $(CONTIKI_PROJECT)
+EXE=slip-radio
+all: $(EXE)
 APPS = slip-cmd
 
-CONTIKI=../../..
+ifeq ($(TARGET),)
+  -include Makefile.target
+endif
 
-WITH_UIP6=1
-UIP_CONF_IPV6=1
-UIP_CONF_RPL=0
+CONTIKI=../../..
 
 #linker optimizations
 SMALL=1
@@ -16,5 +16,20 @@ PROJECT_SOURCEFILES += slip-net.c no-framer.c
 ifeq ($(TARGET),sky)
   PROJECT_SOURCEFILES += slip-radio-cc2420.c slip-radio-sky-sensors.c
 endif
+ifeq ($(TARGET),nooliberry)
+  PROJECT_SOURCEFILES += slip-radio-rf230.c
+endif
+ifeq ($(TARGET),econotag)
+  PROJECT_SOURCEFILES += slip-radio-mc1322x.c
+endif
 
+CONTIKI_WITH_RPL = 0
+CONTIKI_WITH_IPV6 = 1
 include $(CONTIKI)/Makefile.include
+
+avr-size: $(EXE).$(TARGET).sz
+
+flash: $(EXE).$(TARGET).u $(EXE).$(TARGET).eu
+
+.PHONY: flash avr-size
+.PRECIOUS: $(EXE).$(TARGET).hex $(EXE).$(TARGET).eep

@@ -1,11 +1,6 @@
-all: er-example-server er-example-client
-# use this target explicitly if requried: er-plugtest-server
+EXE=er-example-server er-example-client
 
-
-# variable for this Makefile
-# configure CoAP implementation (3|7|12|13) (er-coap-07 also supports CoAP draft 08)
-WITH_COAP=13
-
+all: $(EXE)
 
 # variable for Makefile.include
 WITH_UIP6=1
@@ -95,3 +90,16 @@ connect-router-cooja:	$(CONTIKI)/tools/tunslip6
 
 connect-minimal:
 	sudo ip address add fdfd::1/64 dev tap0
+
+avr-size-server: er-example-server.$(TARGET).sz
+
+avr-size-client: er-example-server.$(TARGET).sz
+
+flash-server: er-example-server.$(TARGET).u er-example-server.$(TARGET).eu
+
+flash-client: er-example-client.$(TARGET).u er-example-client.$(TARGET).eu
+
+.PHONY: flash-client avr-size-client flash-server avr-size-server
+.PRECIOUS: er-example-server.$(TARGET).hex er-example-server.$(TARGET).eep \
+           er-example-client.$(TARGET).hex er-example-client.$(TARGET).eep
+

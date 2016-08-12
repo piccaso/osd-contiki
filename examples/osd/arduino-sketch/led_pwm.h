@@ -18,18 +18,17 @@
 #define led_pwm_h
 #include "contiki.h"
 #include "contiki-net.h"
-#include "erbium.h"
-#include "er-coap-13.h"
+#include "er-coap.h"
 
 extern uint8_t  pwm;
 extern uint8_t  period_100ms;
 extern uint16_t analog2_voltage;
 extern uint16_t analog5_voltage;
 
-extern resource_t resource_led_pwm;
-extern resource_t resource_led_period;
-extern resource_t resource_analog2_voltage;
-extern resource_t resource_analog5_voltage;
+extern resource_t res_led_pwm;
+extern resource_t res_led_period;
+extern resource_t res_analog2_voltage;
+extern resource_t res_analog5_voltage;
 
 #endif // led_pwm_h
 /** @} */

@@ -1,0 +1,15 @@
+
+
+Hallo ,
+
+Für ein ähnliches Problem habe ich  einen csv zu C Konverter in Python 
+geschrieben.
+Aus dem csv im Anhang habe ich mit
+
+python lookuptable.py example.csv 1.h 1.c
+
+das .c und .h erzeugt. Ohne Gewähr, evtl. hilft es.
+
+link:
+
+http://www.mikrocontroller.net/topic/232722

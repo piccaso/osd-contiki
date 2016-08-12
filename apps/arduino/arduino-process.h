@@ -51,6 +51,13 @@
 
 #include "contiki.h"
 
+/*--------------- enable sleep mode ---------------------------------------*/
+void mcu_sleep_on(void);
+/*--------------- disable sleep mode ---------------------------------------*/
+void mcu_sleep_off(void);
+/*---------------- set sleep value ------------------------------------*/
+void mcu_sleep_set(uint8_t value);
+
 extern void loop         (void);
 extern void setup        (void);
 extern void arduino_init (void);

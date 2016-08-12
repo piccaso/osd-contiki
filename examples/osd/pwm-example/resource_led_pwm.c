@@ -12,8 +12,7 @@
 #include <string.h>
 #include "contiki.h"
 #include "jsonparse.h"
-/* Only coap 13 for now */
-#include "er-coap-13.h"
+#include "er-coap.h"
 #include "hw_timer.h"
 #include "generic_resource.h"
 
@@ -59,8 +58,7 @@ size_t pwm_to_string (const char *n, uint8_t is_json, char *buf, size_t bufsize)
 }
 
 GENERIC_RESOURCE \
-    ( led_pwm, METHOD_GET | METHOD_PUT
-    , "led/pwm"
+    ( led_pwm
     , LED PWM
     , duty-cycle
     , pwm_from_string

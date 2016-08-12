@@ -16,12 +16,17 @@
 
 #ifndef time_resource_h
 #define time_resource_h
+#include <assert.h>
 #include "contiki.h"
-#include "erbium.h"
+#include "rest-engine.h"
 
-extern resource_t resource_timestamp;
-extern resource_t resource_localtime;
-extern resource_t resource_utc;
+extern resource_t res_timestamp;
+extern resource_t res_timezone;
+extern resource_t res_crontab;
+extern resource_t res_localtime;
+extern resource_t res_utc;
+
+extern void activate_cron_resources (void);
 
 #endif // time_resource_h
 /** @} */

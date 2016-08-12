@@ -38,8 +38,13 @@
 /* Save some memory for the sky platform. */
 #undef NBR_TABLE_CONF_MAX_NEIGHBORS
 #define NBR_TABLE_CONF_MAX_NEIGHBORS     20
+
 #undef UIP_CONF_MAX_ROUTES
 #define UIP_CONF_MAX_ROUTES      20
+
+/* Increase rpl-border-router IP-buffer when using more than 64. */
+#undef REST_MAX_CHUNK_SIZE
+#define REST_MAX_CHUNK_SIZE            64
 
 #ifndef QUEUEBUF_CONF_NUM
 #define QUEUEBUF_CONF_NUM          4

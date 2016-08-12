@@ -55,9 +55,32 @@ ISR(PCINT0_vect)
 //    }
 //  }
 }
+
+/* Compatibility of old vs new definitions in io.h */
+#ifndef DDE0
+#define DDE0 DDRE0
+#define DDE1 DDRE1
+#define DDE2 DDRE2
+#define DDE3 DDRE3
+#define DDE4 DDRE4
+#define DDE5 DDRE5
+#define DDE6 DDRE6
+#define DDE7 DDRE7
+#endif
+#ifndef DDF0
+#define DDF0 DDRF0
+#define DDF1 DDRF1
+#define DDF2 DDRF2
+#define DDF3 DDRF3
+#define DDF4 DDRF4
+#define DDF5 DDRF5
+#define DDF6 DDRF6
+#define DDF7 DDRF7
+#endif
+
 /**
  *   \brief This will intialize the KEY for button readings.
-*/
+ */
 void
 key_init(void)
 {

@@ -1,0 +1,20 @@
+Timezones
+=========
+
+The new version supports time zones and daylight saving time (DST).
+Currently we support only a single timezone. We use the UNIX timezone
+format which is usually specified in an environment variable TZ.
+
+Note that for timezone information you can have different
+representation, either relative to Universal Time Coordinated (UTC) or
+to International Atomic Time (TAI), the latter contains leap seconds.
+Since most systems today use UTC *and* the clock of a microcontroller
+is typically not accurate enough to care about leap seconds, we're using
+timezone files relative to UTC.
+
+Wikipedia has a very good treatment of the public timezone database in
+https://en.wikipedia.org/wiki/Tz_database
+
+The format of timezone strings is described in the Linux manual page
+tzset(3). The timezone specification for Europe/Vienna is
+CET-1CEST,M3.5.0,M10.5.0/3

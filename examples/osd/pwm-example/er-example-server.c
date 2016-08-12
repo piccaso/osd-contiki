@@ -43,9 +43,7 @@
 #include "contiki.h"
 #include "contiki-net.h"
 #include "jsonparse.h"
-
-#include "erbium.h"
-#include "er-coap-13.h"
+#include "er-coap.h"
 
 #include "led_pwm.h"
 
@@ -57,44 +55,6 @@
 #endif
 
 /******************************************************************************/
-
-/*
- * Resources are defined by the RESOURCE macro.
- * Signature: resource name, the RESTful methods it handles, and its URI
- * path (omitting the leading slash).
- */
-RESOURCE(info, METHOD_GET, "info", "title=\"Info\";rt=\"text\"");
-
-/*
- * A handler function named [resource name]_handler must be implemented
- * for each RESOURCE.  A buffer for the response payload is provided
- * through the buffer pointer. Simple resources can ignore
- * preferred_size and offset, but must respect the REST_MAX_CHUNK_SIZE
- * limit for the buffer.  If a smaller block size is requested for CoAP,
- * the REST framework automatically splits the data.
- */
-void
-info_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
-{
-  char message[100];
-  int index = 0;
-  int length = 0; /*           |<-------->| */
-
-  /*
-   * Some data that has the length up to REST_MAX_CHUNK_SIZE. For more,
-   * see the chunk resource.
-   */
-  // jSON Format
-  index += sprintf(message + index,"{\n \"Version\" : \"V1.0pre1\",\n");
-  index += sprintf(message + index," \"name\" : \"PWM\"\n");
-  index += sprintf(message + index,"}\n");
-
-  length = strlen(message);
-  memcpy(buffer, message,length );
-
-  REST.set_header_content_type(response, REST.type.APPLICATION_JSON);
-  REST.set_response_payload(response, buffer, length);
-}
 
 void 
 hw_init()
@@ -137,8 +97,7 @@ PROCESS_THREAD(rest_server_example, ev, data)
   rest_init_engine();
 
   /* Activate the application-specific resources. */
-  rest_activate_resource(&resource_info);
-  rest_activate_resource(&resource_led_pwm);
+  rest_activate_resource(&res_led_pwm, "led/pwm");
 
   /* Define application-specific events here. */
   while(1) {

@@ -41,6 +41,7 @@
 #include <string.h>
 #include "contiki.h"
 #include "contiki-net.h"
+#include "rest-engine.h"
 
 
 /* Define which resources to include to meet memory constraints. */
@@ -50,7 +51,6 @@
 #define REST_RES_LEDS 1
 #define REST_RES_TOGGLE 1
 
-#include "erbium.h"
 
 #if defined (PLATFORM_HAS_BUTTON)
 #include "dev/button-sensor.h"
@@ -65,18 +65,6 @@
 // embedd-vm
 #include "embedvm.h"
 
-/* For CoAP-specific example: not required for normal RESTful Web service. */
-#if WITH_COAP == 3
-#include "er-coap-03.h"
-#elif WITH_COAP == 7
-#include "er-coap-07.h"
-#elif WITH_COAP == 12
-#include "er-coap-12.h"
-#elif WITH_COAP == 13
-#include "er-coap-13.h"
-#else
-#warning "Erbium example without CoAP-specifc functionality"
-#endif /* CoAP-specific example */
 
 #define DEBUG 1
 #if DEBUG
@@ -97,7 +85,6 @@
  * Resources are defined by the RESOURCE macro.
  * Signature: resource name, the RESTful methods it handles, and its URI path (omitting the leading slash).
  */
-RESOURCE(info, METHOD_GET, "info", "title=\"Info\";rt=\"Text\"");
 
 /*
  * A handler function named [resource name]_handler must be implemented for each RESOURCE.
@@ -106,7 +93,7 @@ RESOURCE(info, METHOD_GET, "info", "title=\"Info\";rt=\"Text\"");
  * If a smaller block size is requested for CoAP, the REST framework automatically splits the data.
  */
 void
-info_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+info_get_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
   char message[100];
   int index = 0;
@@ -124,6 +111,7 @@ info_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_
   REST.set_header_content_type(response, REST.type.APPLICATION_JSON);
   REST.set_response_payload(response, buffer, length);
 }
+RESOURCE(res_info, "title=\"Info\";rt=\"text\"", info_get_handler, NULL, NULL, NULL);
 #endif
 
 /******************************************************************************/
@@ -131,7 +119,6 @@ info_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_
 /******************************************************************************/
 #if REST_RES_LEDS
 /*A simple actuator example, depending on the color query parameter and post variable mode, corresponding led is activated or deactivated*/
-RESOURCE(leds, METHOD_POST | METHOD_PUT , "actuators/leds", "title=\"LEDs: ?color=r|g|b, POST/PUT mode=on|off\";rt=\"Control\"");
 
 void
 leds_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
@@ -176,41 +163,39 @@ leds_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_
     REST.set_response_status(response, REST.status.BAD_REQUEST);
   }
 }
+RESOURCE(res_leds, "title=\"LEDs: ?color=r|g|b, POST/PUT mode=on|off\";rt=\"Control\"", NULL, leds_handler, leds_handler, NULL);
 #endif
 
 /******************************************************************************/
 #if REST_RES_TOGGLE
 /* A simple actuator example. Toggles the red led */
-RESOURCE(toggle, METHOD_GET | METHOD_PUT | METHOD_POST, "actuators/toggle", "title=\"Red LED\";rt=\"Control\"");
 void
 toggle_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
   leds_toggle(LEDS_RED);
 }
+RESOURCE(res_toggle, "title=\"Red LED\";rt=\"Control\"", toggle_handler, toggle_handler, leds_handler, NULL);
 #endif
 #endif /* PLATFORM_HAS_LEDS */
 
 /******************************************************************************/
 #if REST_RES_BATTERY && defined (PLATFORM_HAS_BATTERY)
 /* A simple getter example. Returns the reading from light sensor with a simple etag */
-RESOURCE(battery, METHOD_GET, "sensors/battery", "title=\"Battery status\";rt=\"Battery\"");
 void
 battery_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
   int battery = battery_sensor.value(0);
 
-  const uint16_t *accept = NULL;
-  int num = REST.get_header_accept(request, &accept);
+  unsigned int accept = -1;
+  REST.get_header_accept(request, &accept);
 
-  if ((num==0) || (num && accept[0]==REST.type.TEXT_PLAIN))
-  {
+  if(accept == -1 || accept == REST.type.TEXT_PLAIN) {
     REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
     snprintf((char *)buffer, REST_MAX_CHUNK_SIZE, "%d", battery);
 
     REST.set_response_payload(response, (uint8_t *)buffer, strlen((char *)buffer));
   }
-  else if (num && (accept[0]==REST.type.APPLICATION_JSON))
-  {
+  else if (accept == REST.type.APPLICATION_JSON) {
     REST.set_header_content_type(response, REST.type.APPLICATION_JSON);
     snprintf((char *)buffer, REST_MAX_CHUNK_SIZE, "{'battery':%d}", battery);
 
@@ -223,6 +208,7 @@ battery_handler(void* request, void* response, uint8_t *buffer, uint16_t preferr
     REST.set_response_payload(response, msg, strlen(msg));
   }
 }
+RESOURCE(res_battery, "title=\"Battery status\";rt=\"battery-mV\"", battery_handler, NULL, NULL, NULL);
 #endif /* PLATFORM_HAS_BATTERY */
 
 #include "vmcode.hdr"
@@ -238,8 +224,6 @@ struct embedvm_s vm = { };
 /******************************************************************************/
 #if REST_RES_EVM
 /*A simple actuator example, depending on the color query parameter and post variable mode, corresponding led is activated or deactivated*/
-RESOURCE(evm, METHOD_GET | METHOD_POST | METHOD_PUT , "evm", "title=\"Embedd-VM, POST/PUT player=0/9999\";rt=\"Embedd-VM\"");
-
 void
 evm_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
@@ -249,7 +233,6 @@ evm_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_s
   //int length = 0; /*           |<-------->| */
   int16_t val = 0;
   uint16_t old_ip=0;
-  const uint16_t *accept = NULL;
 
   switch(REST.get_method_type(request)){
    case METHOD_GET:
@@ -279,9 +262,10 @@ evm_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_s
   default:
     success = 0;
   }
-  int num = REST.get_header_accept(request, &accept);
-  if ((num==0) || (num && accept[0]==REST.type.TEXT_PLAIN))
-  {
+  
+  unsigned int accept = -1;
+  REST.get_header_accept(request, &accept);
+  if(accept == -1 || accept == REST.type.TEXT_PLAIN) {
     if(success){
       //length = strlen(gmessage);
       memcpy(buffer, gmessage,gindex );
@@ -299,6 +283,7 @@ evm_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_s
     REST.set_response_payload(response, msg, strlen(msg));
   }
 }
+RESOURCE(res_evm, "title=\"Embedd-VM, POST/PUT player=0/9999\";rt=\"Embedd-VM\"", evm_handler, evm_handler, evm_handler, NULL);
 #endif
 #endif
 
@@ -434,22 +419,22 @@ PROCESS_THREAD(rest_server_example, ev, data)
 
   /* Activate the application-specific resources. */
 #if REST_RES_INFO
-  rest_activate_resource(&resource_info);
+  rest_activate_resource(&res_info, "info");
 #endif
 #if defined (PLATFORM_HAS_LEDS)
 #if REST_RES_LEDS
-  rest_activate_resource(&resource_leds);
+  rest_activate_resource(&res_leds,"a/leds");
 #endif
 #if REST_RES_TOGGLE
-  rest_activate_resource(&resource_toggle);
+  rest_activate_resource(&res_toggle,"a/toggle");
 #endif
 #endif /* PLATFORM_HAS_LEDS */
 #if REST_RES_EVM
-  rest_activate_resource(&resource_evm);
+  rest_activate_resource(&res_evm,"a/evm");
 #endif
 #if defined (PLATFORM_HAS_BATTERY) && REST_RES_BATTERY
   SENSORS_ACTIVATE(battery_sensor);
-  rest_activate_resource(&resource_battery);
+  rest_activate_resource(&res_battery,"s/battery");
 #endif
 
   while(1) {

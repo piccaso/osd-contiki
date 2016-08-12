@@ -32,12 +32,6 @@
 #ifndef PROJECT_RPL_WEB_CONF_H_
 #define PROJECT_RPL_WEB_CONF_H_
 
-//#define PLATFORM_HAS_LEDS    1
-//#define PLATFORM_HAS_BUTTON  1
-#define PLATFORM_HAS_OPTRIAC  1
-#define PLATFORM_HAS_TEMPERATURE   1
-#define PLATFORM_HAS_BATTERY 1
-
 #define SICSLOWPAN_CONF_FRAG	1
 
 /* For Debug: Dont allow MCU sleeping between channel checks */

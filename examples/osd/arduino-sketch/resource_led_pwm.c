@@ -13,36 +13,36 @@
 #include <string.h>
 #include "contiki.h"
 #include "jsonparse.h"
-/* Only coap 13 for now */
-#include "er-coap-13.h"
+#include "er-coap.h"
 #include "generic_resource.h"
 #include "led_pwm.h"
 
-void pwm_from_string (const char *name, const char *s)
+int pwm_from_string (const char *name, const char *uri, const char *s)
 {
     uint32_t tmp = strtoul (s, NULL, 10);
     if (tmp > 255) {
       tmp = 255;
     }
     pwm = tmp;
+    return 0;
 }
 
 size_t
-pwm_to_string (const char *name, uint8_t is_json, char *buf, size_t bufsize)
+pwm_to_string (const char *name, const char *uri, char *buf, size_t bufsize)
 {
   return snprintf (buf, bufsize, "%d", pwm);
 }
 
 GENERIC_RESOURCE \
-    ( led_pwm, METHOD_GET | METHOD_PUT
-    , "led/pwm"
+    ( led_pwm
     , LED PWM
     , duty-cycle
+    , 0
     , pwm_from_string
     , pwm_to_string
     );
 
-void period_from_string (const char *name, const char *s)
+int period_from_string (const char *name, const char *uri, const char *s)
 {
     uint32_t tmp = (strtoul (s, NULL, 10) + 50) / 100;
     if (tmp > 10) {
@@ -52,51 +52,52 @@ void period_from_string (const char *name, const char *s)
         tmp = 1;
     }
     period_100ms = tmp;
+    return 0;
 }
 
 size_t
-period_to_string (const char *name, uint8_t is_json, char *buf, size_t bufsize)
+period_to_string (const char *name, const char *uri, char *buf, size_t bufsize)
 {
   return snprintf (buf, bufsize, "%d", period_100ms * 100);
 }
 
 GENERIC_RESOURCE \
-    ( led_period, METHOD_GET | METHOD_PUT
-    , "led/period"
+    ( led_period
     , LED Period
     , ms
+    , 0
     , period_from_string
     , period_to_string
     );
 
 size_t
-analog2_v (const char *name, uint8_t is_json, char *buf, size_t bufsize)
+analog2_v (const char *name, const char *uri, char *buf, size_t bufsize)
 {
   return snprintf
     (buf, bufsize, "%d.%03d", analog2_voltage / 1000, analog2_voltage % 1000);
 }
 
 GENERIC_RESOURCE \
-    ( analog2_voltage, METHOD_GET
-    , "analog/2"
+    ( analog2_voltage
     , Analog 2 voltage
     , V
+    , 0
     , NULL
     , analog2_v
     );
 
 size_t
-analog5_v (const char *name, uint8_t is_json, char *buf, size_t bufsize)
+analog5_v (const char *name, const char *uri, char *buf, size_t bufsize)
 {
   return snprintf
     (buf, bufsize, "%d.%03d", analog5_voltage / 1000, analog5_voltage % 1000);
 }
 
 GENERIC_RESOURCE \
-    ( analog5_voltage, METHOD_GET
-    , "analog/5"
+    ( analog5_voltage
     , Analog 5 voltage
     , V
+    , 0
     , NULL
     , analog5_v
     );

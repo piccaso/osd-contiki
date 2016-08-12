@@ -33,8 +33,8 @@
  *         Joakim Eriksson <joakime@sics.se>
  */
 
-#include "net/uip.h"
-#include "net/uip-ds6.h"
+#include "net/ip/uip.h"
+#include "net/ipv6/uip-ds6.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -52,7 +52,7 @@
 
 
 #define DEBUG DEBUG_NONE
-#include "net/uip-debug.h"
+#include "net/ip/uip-debug.h"
 
 #ifdef linux
 #include <linux/if.h>
@@ -222,13 +222,15 @@ tun_init()
 }
 
 /*---------------------------------------------------------------------------*/
-void
+static int
 tun_output(uint8_t *data, int len)
 {
   /* fprintf(stderr, "*** Writing to tun...%d\n", len); */
   if(write(tunfd, data, len) != len) {
     err(1, "serial_to_tun: write");
+    return -1;
   }
+  return 0;
 }
 /*---------------------------------------------------------------------------*/
 int
@@ -246,13 +248,14 @@ init(void)
 {
 }
 /*---------------------------------------------------------------------------*/
-static void
+static int
 output(void)
 {
   PRINTF("SUT: %u\n", uip_len);
   if(uip_len > 0) {
-    tun_output(&uip_buf[UIP_LLH_LEN], uip_len);
+    return tun_output(&uip_buf[UIP_LLH_LEN], uip_len);
   }
+  return 0;
 }
 
 

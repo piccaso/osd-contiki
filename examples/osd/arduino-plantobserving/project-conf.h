@@ -38,6 +38,9 @@
 
 #define SICSLOWPAN_CONF_FRAG	1
 
+/* Save energy */
+#define RDC_CONF_PT_YIELD_OFF
+
 /* For Debug: Dont allow MCU sleeping between channel checks */
 //#undef RDC_CONF_MCU_SLEEP
 //#define RDC_CONF_MCU_SLEEP       0

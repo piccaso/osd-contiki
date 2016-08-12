@@ -1,1 +1,2 @@
-time_src = time.c resource_gmtime.c resource_timestamp.c
+time_src = time.c resource_gmtime.c resource_timestamp.c \
+    resource_timezone.c resource_crontab.c cron.c

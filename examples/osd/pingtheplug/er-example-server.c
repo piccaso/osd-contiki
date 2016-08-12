@@ -43,7 +43,7 @@
 #include "contiki.h"
 #include "contiki-net.h"
 #include <avr/eeprom.h>
-
+#include "rest-engine.h"
 
 #define PLATFORM_HAS_LED  1
 //#define PLATFORM_HAS_BUTTON  1
@@ -63,7 +63,6 @@
 #define REST_RES_LED 1
 #define REST_RES_BATTERY 1
 
-#include "erbium.h"
 #include "pcintkey.h"
 #include "statusled.h"
 
@@ -84,18 +83,6 @@
 #endif
 
 
-/* For CoAP-specific example: not required for normal RESTful Web service. */
-#if WITH_COAP == 3
-#include "er-coap-03.h"
-#elif WITH_COAP == 7
-#include "er-coap-07.h"
-#elif WITH_COAP == 12
-#include "er-coap-12.h"
-#elif WITH_COAP == 13
-#include "er-coap-13.h"
-#else
-#warning "Erbium example without CoAP-specifc functionality"
-#endif /* CoAP-specific example */
 
 #define DEBUG 1
 #if DEBUG
@@ -118,7 +105,6 @@ uint8_t g_triac_b = 0;
  * Resources are defined by the RESOURCE macro.
  * Signature: resource name, the RESTful methods it handles, and its URI path (omitting the leading slash).
  */
-RESOURCE(model, METHOD_GET, "p/model", "title=\"model\";rt=\"simple.dev.mdl\"");
 
 /*
  * A handler function named [resource name]_handler must be implemented for each RESOURCE.
@@ -127,7 +113,7 @@ RESOURCE(model, METHOD_GET, "p/model", "title=\"model\";rt=\"simple.dev.mdl\"");
  * If a smaller block size is requested for CoAP, the REST framework automatically splits the data.
  */
 void
-model_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+model_get_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
   char message[100];
   int index = 0;
@@ -144,6 +130,8 @@ model_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
   REST.set_header_content_type(response, REST.type.APPLICATION_JSON);
   REST.set_response_payload(response, buffer, length);
 }
+RESOURCE(res_model, "title=\"model\";rt=\"simple.dev.md\"", model_get_handler, NULL, NULL, NULL);
+
 #endif
 
 /******************************************************************************/
@@ -152,7 +140,6 @@ model_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
  * Resources are defined by the RESOURCE macro.
  * Signature: resource name, the RESTful methods it handles, and its URI path (omitting the leading slash).
  */
-RESOURCE(sw, METHOD_GET, "p/sw", "title=\"Software Version\";rt=\"simple.dev.sv\"");
 
 /*
  * A handler function named [resource name]_handler must be implemented for each RESOURCE.
@@ -161,7 +148,7 @@ RESOURCE(sw, METHOD_GET, "p/sw", "title=\"Software Version\";rt=\"simple.dev.sv\
  * If a smaller block size is requested for CoAP, the REST framework automatically splits the data.
  */
 void
-sw_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+sw_get_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
   char message[100];
   int index = 0;
@@ -169,7 +156,7 @@ sw_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_si
 
   /* Some data that has the length up to REST_MAX_CHUNK_SIZE. For more, see the chunk resource. */
        // jSON Format
-     index += sprintf(message + index,"{\n \"sw\" : \"V0.9\"\n");
+     index += sprintf(message + index,"{\n \"sw\" : \"V1.0\"\n");
      index += sprintf(message + index,"}\n");
 
     length = strlen(message);
@@ -178,6 +165,7 @@ sw_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_si
   REST.set_header_content_type(response, REST.type.APPLICATION_JSON);
   REST.set_response_payload(response, buffer, length);
 }
+RESOURCE(res_sw, "title=\"Software Version\";rt=\"simple.dev.sv\"", sw_get_handler, NULL, NULL, NULL);
 #endif
 
 /******************************************************************************/
@@ -186,7 +174,7 @@ sw_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_si
  * Resources are defined by the RESOURCE macro.
  * Signature: resource name, the RESTful methods it handles, and its URI path (omitting the leading slash).
  */
-RESOURCE(name,  METHOD_POST | METHOD_GET, "p/name", "title=\"name\";rt=\"simple.dev.n\"");
+
 /* eeprom space */ 
 #define P_NAME "Testboard"
 #define P_NAME_MAX 17
@@ -248,13 +236,14 @@ name_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_
     REST.set_response_status(response, REST.status.BAD_REQUEST);
   }
 }
+RESOURCE(res_name, "title=\"name\";rt=\"simple.dev.n\"", name_handler, NULL, name_handler, NULL );
 #endif
 
 
 /******************************************************************************/
 #if REST_RES_TIMER
 /*A simple actuator example*/
-RESOURCE(timer, METHOD_GET | METHOD_POST , "a/timer", "title=\"TIMER, POST timer=XXX\";rt=\"Control\"");
+
 /* eeprom space */ 
 #define P_TIMER "60"
 #define P_TIMER_MAX 10
@@ -320,12 +309,13 @@ timer_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
     REST.set_response_status(response, REST.status.BAD_REQUEST);
   }
 }
+RESOURCE(res_timer, "title=\"timer\";rt=\"timer\"", timer_handler, NULL, timer_handler, NULL );
 #endif
 
 /******************************************************************************/
 #if REST_RES_RESET
 /*A simple actuator example*/
-RESOURCE(reset, METHOD_GET | METHOD_POST , "p/reset", "title=\"RESET, POST mode=on\";rt=\"Control\"");
+
 /* eeprom space */ 
 #define P_RESET "0"
 #define P_RESET_MAX 10
@@ -397,12 +387,13 @@ reset_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
     REST.set_response_status(response, REST.status.BAD_REQUEST);
   }
 }
+RESOURCE(res_reset, "title=\"reset\";rt=\"reset\"", reset_handler, NULL, reset_handler, NULL );
 #endif
 
 /******************************************************************************/
 // pcintkey_ext
 /*A simple actuator example. read the key button status*/
-RESOURCE(extbutton, METHOD_GET | METHOD_POST , "s/extbutton",  "title=\"ext.Button\";rt=\"Text\"");
+
 void
 extbutton_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
@@ -461,11 +452,11 @@ extbutton_handler(void* request, void* response, uint8_t *buffer, uint16_t prefe
     REST.set_response_status(response, REST.status.BAD_REQUEST);
   }
 }
+RESOURCE(res_extbutton, "title=\"button\";rt=\"button\"", extbutton_handler, NULL, extbutton_handler, NULL );
 
 /******************************************************************************/
 #if REST_RES_LED
 /*A simple actuator example, depending on the color query parameter and post variable mode, corresponding led is activated or deactivated*/
-RESOURCE(led1, METHOD_POST | METHOD_PUT , "a/led1", "title=\"LED: POST/PUT mode=on|off\";rt=\"simple.act.led\"");
 
 void
 led1_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
@@ -495,9 +486,9 @@ led1_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_
     REST.set_response_status(response, REST.status.BAD_REQUEST);
   }
 }
+RESOURCE(res_led1, "title=\"LED: PUT mode=on|off\";rt=\"simple.act.led\"", led1_handler, NULL, led1_handler, NULL );
 
 /*A simple actuator example, depending on the color query parameter and post variable mode, corresponding led is activated or deactivated*/
-RESOURCE(led2, METHOD_POST | METHOD_PUT , "a/led2", "title=\"LED: POST/PUT mode=on|off\";rt=\"simple.act.led\"");
 
 void
 led2_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
@@ -525,11 +516,11 @@ led2_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_
     REST.set_response_status(response, REST.status.BAD_REQUEST);
   }
 }
+RESOURCE(res_led2, "title=\"LED: PUT mode=on|off\";rt=\"simple.act.led\"", led2_handler, NULL, led2_handler, NULL );
 #endif
 
 #if REST_RES_OPTRIAC
 /*A simple actuator example*/
-RESOURCE(optriac, METHOD_GET | METHOD_POST | METHOD_PUT , "a/optriac", "title=\"TRIAC, POST/PUT mode=on|off\";rt=\"Control\"");
 
 void
 optriac_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
@@ -566,9 +557,6 @@ optriac_handler(void* request, void* response, uint8_t *buffer, uint16_t preferr
      break;
 
    case METHOD_PUT:
-     success = 0;
-     break;
-   case METHOD_POST:
      if (success && (len=REST.get_post_variable(request, "mode", &mode))) {
      PRINTF("mode %s\n", mode);
        if (strncmp(mode, "on", len)==0) {
@@ -593,21 +581,22 @@ optriac_handler(void* request, void* response, uint8_t *buffer, uint16_t preferr
     REST.set_response_status(response, REST.status.BAD_REQUEST);
   }
 }
+RESOURCE(res_optriac, "title=\"TRIAC, PUT mode=on|off\";rt=\"simple.act.triac\"", optriac_handler, NULL, optriac_handler, NULL );
 #endif /* PLATFORM_HAS_OPTRIAC */
 
 /******************************************************************************/
 #if REST_RES_TEMPERATURE && defined (PLATFORM_HAS_TEMPERATURE)
 /* A simple getter example. Returns the reading from light sensor with a simple etag */
-RESOURCE(temperature, METHOD_GET, "s/cputemp", "title=\"Temperature status\";rt=\"temperature-c\"");
+
 void
 temperature_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
-  int temperature = temperature_sensor.value(0);
+  int temperature = temperature_sensor.value(0);  
+  
+  unsigned int accept = -1;
+  REST.get_header_accept(request, &accept);
 
-  const uint16_t *accept = NULL;
-  int num = REST.get_header_accept(request, &accept);
-
-  if ((num==0) || (num && accept[0]==REST.type.TEXT_PLAIN))
+  if(accept == -1 || accept == REST.type.TEXT_PLAIN) 
   {
     REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
     snprintf((char *)buffer, REST_MAX_CHUNK_SIZE, "%d.%02d", temperature/100, temperature % 100);
@@ -615,7 +604,7 @@ temperature_handler(void* request, void* response, uint8_t *buffer, uint16_t pre
 
     REST.set_response_payload(response, (uint8_t *)buffer, strlen((char *)buffer));
   }
-  else if (num && (accept[0]==REST.type.APPLICATION_JSON))
+  else if (accept == REST.type.APPLICATION_JSON)
   {
     REST.set_header_content_type(response, REST.type.APPLICATION_JSON);
     snprintf((char *)buffer, REST_MAX_CHUNK_SIZE, "{'temperature':%d.%02d}", temperature/100, temperature % 100);
@@ -629,28 +618,29 @@ temperature_handler(void* request, void* response, uint8_t *buffer, uint16_t pre
     REST.set_response_payload(response, msg, strlen(msg));
   }
 }
+RESOURCE(res_temperature, "title=\"Temperature status\";rt=\"temperature-c\"", temperature_handler, NULL, NULL, NULL );
 #endif /* PLATFORM_HAS_TEMPERATURE */
 
 /******************************************************************************/
 #if REST_RES_BATTERY && defined (PLATFORM_HAS_BATTERY)
 /* A simple getter example. Returns the reading from light sensor with a simple etag */
-RESOURCE(battery, METHOD_GET, "s/battery", "title=\"Battery status\";rt=\"battery-mV\"");
+
 void
 battery_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
   int battery = battery_sensor.value(0);
+  
+  unsigned int accept = -1;
+  REST.get_header_accept(request, &accept);
 
-  const uint16_t *accept = NULL;
-  int num = REST.get_header_accept(request, &accept);
-
-  if ((num==0) || (num && accept[0]==REST.type.TEXT_PLAIN))
+  if(accept == -1 || accept == REST.type.TEXT_PLAIN) 
   {
     REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
     snprintf((char *)buffer, REST_MAX_CHUNK_SIZE, "%d.%02d", battery/1000, battery % 1000);
 
     REST.set_response_payload(response, (uint8_t *)buffer, strlen((char *)buffer));
   }
-  else if (num && (accept[0]==REST.type.APPLICATION_JSON))
+  else if (accept == REST.type.APPLICATION_JSON)
   {
     REST.set_header_content_type(response, REST.type.APPLICATION_JSON);
     snprintf((char *)buffer, REST_MAX_CHUNK_SIZE, "{\"battery\":%d.%02d}", battery/1000, battery % 1000);
@@ -664,6 +654,8 @@ battery_handler(void* request, void* response, uint8_t *buffer, uint16_t preferr
     REST.set_response_payload(response, msg, strlen(msg));
   }
 }
+RESOURCE(res_battery, "title=\"Battery status\";rt=\"battery-mV\"", battery_handler, NULL, NULL, NULL );
+
 #endif /* PLATFORM_HAS_BATTERY */
 /******************************************************************************/
 
@@ -686,7 +678,7 @@ AUTOSTART_PROCESSES(&rest_server_example, &sensors_process);
 PROCESS_THREAD(rest_server_example, ev, data)
 {
   static struct etimer ds_periodic_timer;
-  static int ext4=0;
+//  static int ext4=0;
   static int ext5=0;
   static int ext6=0;
 //  ext4 = is_button_ext4();
@@ -722,40 +714,40 @@ PROCESS_THREAD(rest_server_example, ev, data)
 
   /* Activate the application-specific resources. */
 #if REST_RES_MODEL
-  rest_activate_resource(&resource_model);
+  rest_activate_resource(&res_model,"p/model");
 #endif
 #if REST_RES_SW
-  rest_activate_resource(&resource_sw);
+  rest_activate_resource(&res_sw,"p/sw");
 #endif
 #if REST_RES_NAME
-  rest_activate_resource(&resource_name);
+  rest_activate_resource(&res_name,"p/name");
 #endif
 #if REST_RES_RESET
-  rest_activate_resource(&resource_reset);
+  rest_activate_resource(&res_reset,"p/reset");
 #endif
 #if REST_RES_TIMER
-  rest_activate_resource(&resource_timer);
+  rest_activate_resource(&res_timer,"a/timer");
 #endif
 
-  rest_activate_resource(&resource_extbutton);
+  rest_activate_resource(&res_extbutton,"s/extbutton");
   /* Activate the application-specific resources. */
 #if REST_RES_OPTRIAC
   SENSORS_ACTIVATE(optriac_sensor);
-  rest_activate_resource(&resource_optriac);
+  rest_activate_resource(&res_optriac,"a/optriac");
 #endif
 #if defined (PLATFORM_HAS_LED)
 #if REST_RES_LED
-  rest_activate_resource(&resource_led1);
-  rest_activate_resource(&resource_led2);
+  rest_activate_resource(&res_led1,"a/led1");
+  rest_activate_resource(&res_led2,"a/led2");
 #endif
 #endif /* PLATFORM_HAS_LED */
 #if defined (PLATFORM_HAS_TEMPERATURE) && REST_RES_TEMPERATURE
   SENSORS_ACTIVATE(temperature_sensor);
-  rest_activate_resource(&resource_temperature);
+  rest_activate_resource(&res_temperature,"s/cputemp");
 #endif
 #if defined (PLATFORM_HAS_BATTERY) && REST_RES_BATTERY
   SENSORS_ACTIVATE(battery_sensor);
-  rest_activate_resource(&resource_battery);
+  rest_activate_resource(&res_battery,"s/battery");
 #endif
 
   etimer_set(&ds_periodic_timer, MESURE_INTERVAL);

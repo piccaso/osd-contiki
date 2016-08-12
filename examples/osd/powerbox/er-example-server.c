@@ -42,16 +42,15 @@
 #include <string.h>
 #include "contiki.h"
 #include "contiki-net.h"
+#include "er-coap.h"
 
 
 /* Define which resources to include to meet memory constraints. */
 #define REST_RES_INFO 1
 #define REST_RES_RELAY 1
 #define REST_RES_LEDS 1
-#define REST_RES_TOGGLE 1
 #define REST_RES_BATTERY 1
 
-#include "erbium.h"
 
 #if defined (PLATFORM_HAS_BUTTON)
 #include "dev/button-sensor.h"
@@ -67,19 +66,6 @@
 #endif
 
 
-/* For CoAP-specific example: not required for normal RESTful Web service. */
-#if WITH_COAP == 3
-#include "er-coap-03.h"
-#elif WITH_COAP == 7
-#include "er-coap-07.h"
-#elif WITH_COAP == 12
-#include "er-coap-12.h"
-#elif WITH_COAP == 13
-#include "er-coap-13.h"
-#else
-#warning "Erbium example without CoAP-specifc functionality"
-#endif /* CoAP-specific example */
-
 #define DEBUG 0
 #if DEBUG
 #define PRINTF(...) printf(__VA_ARGS__)
@@ -92,13 +78,7 @@
 #endif
 
 /******************************************************************************/
-
 #if REST_RES_INFO
-/*
- * Resources are defined by the RESOURCE macro.
- * Signature: resource name, the RESTful methods it handles, and its URI path (omitting the leading slash).
- */
-RESOURCE(info, METHOD_GET, "info", "title=\"Info\";rt=\"text\"");
 
 /*
  * A handler function named [resource name]_handler must be implemented for each RESOURCE.
@@ -107,7 +87,7 @@ RESOURCE(info, METHOD_GET, "info", "title=\"Info\";rt=\"text\"");
  * If a smaller block size is requested for CoAP, the REST framework automatically splits the data.
  */
 void
-info_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+info_get_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
   char message[100];
   int index = 0;
@@ -125,14 +105,17 @@ info_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_
   REST.set_header_content_type(response, REST.type.APPLICATION_JSON);
   REST.set_response_payload(response, buffer, length);
 }
+/*
+ * Resources are defined by the RESOURCE macro.
+ * Signature: resource name, the RESTful methods it handles, and its URI path (omitting the leading slash).
+ */
+RESOURCE(res_info, "title=\"Info\";rt=\"text\"", info_get_handler, NULL, NULL, NULL);
 #endif
 
 /******************************************************************************/
 #if defined (PLATFORM_HAS_RELAY)
 /******************************************************************************/
 #if REST_RES_RELAY
-/*A simple actuator example*/
-RESOURCE(relay, METHOD_GET | METHOD_POST | METHOD_PUT , "actuators/relay", "title=\"RELAY: ?type=1|2|3|4, POST/PUT, POST/PUT mode=on|off\";rt=\"Control\"");
 
 void
 relay_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
@@ -183,9 +166,6 @@ relay_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
      break;
 
    case METHOD_POST:
-     success = 0;
-     break;
-   case METHOD_PUT:
   if ((len=REST.get_query_variable(request, "type", &type))) {
     PRINTF("type %.*s\n", len, type);
     if (strncmp(type, "1", len)==0) {
@@ -224,6 +204,8 @@ relay_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
     REST.set_response_status(response, REST.status.BAD_REQUEST);
   }
 }
+/*A simple actuator example*/
+RESOURCE(res_relay, "title=\"RELAY: ?type=1|2|3|4, POST/PUT, POST/PUT mode=on|off\";rt=\"Control\"", relay_handler, NULL, relay_handler, NULL);
 #endif
 /******************************************************************************/
 #endif /* PLATFORM_HAS_RELAY */
@@ -232,8 +214,6 @@ relay_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
 #if defined (PLATFORM_HAS_LEDS)
 /******************************************************************************/
 #if REST_RES_LEDS
-/*A simple actuator example, depending on the color query parameter and post variable mode, corresponding led is activated or deactivated*/
-RESOURCE(leds, METHOD_POST | METHOD_PUT , "actuators/leds", "title=\"LEDs: ?color=r|g|b, POST/PUT mode=on|off\";rt=\"Control\"");
 
 void
 leds_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
@@ -278,18 +258,10 @@ leds_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_
     REST.set_response_status(response, REST.status.BAD_REQUEST);
   }
 }
+/*A simple actuator example, depending on the color query parameter and post variable mode, corresponding led is activated or deactivated*/
+RESOURCE(res_leds, "title=\"LEDs: ?color=r|g|b, POST/PUT mode=on|off\";rt=\"Control\"", NULL, leds_handler, leds_handler, NULL);
 #endif
 
-/******************************************************************************/
-#if REST_RES_TOGGLE
-/* A simple actuator example. Toggles the red led */
-RESOURCE(toggle, METHOD_GET | METHOD_PUT | METHOD_POST, "actuators/toggle", "title=\"Red LED\";rt=\"Control\"");
-void
-toggle_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
-{
-  leds_toggle(LEDS_RED);
-}
-#endif
 #endif /* PLATFORM_HAS_LEDS */
 
 /******************************************************************************/
@@ -297,7 +269,6 @@ toggle_handler(void* request, void* response, uint8_t *buffer, uint16_t preferre
 /******************************************************************************/
 #if REST_RES_TEMPERATURE && defined (PLATFORM_HAS_TEMPERATURE)
 /* A simple getter example. Returns the reading from light sensor with a simple etag */
-RESOURCE(temperature, METHOD_GET, "sensors/cputemp", "title=\"Temperature status\";rt=\"temperature-c\"");
 void
 temperature_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
@@ -327,29 +298,26 @@ temperature_handler(void* request, void* response, uint8_t *buffer, uint16_t pre
     REST.set_response_payload(response, msg, strlen(msg));
   }
 }
+RESOURCE(res_temperature, "title=\"Temperature status\";rt=\"temperature-c\"", temperature_handler, NULL, NULL, NULL);
 #endif /* PLATFORM_HAS_TEMPERATURE */
 
 /******************************************************************************/
 #if REST_RES_BATTERY && defined (PLATFORM_HAS_BATTERY)
 /* A simple getter example. Returns the reading from light sensor with a simple etag */
-RESOURCE(battery, METHOD_GET, "sensors/battery", "title=\"Battery status\";rt=\"battery-mV\"");
 void
 battery_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
   int battery = battery_sensor.value(0);
 
-  const uint16_t *accept = NULL;
-  int num = REST.get_header_accept(request, &accept);
-
-  if ((num==0) || (num && accept[0]==REST.type.TEXT_PLAIN))
-  {
+  unsigned int accept = -1;
+  REST.get_header_accept(request, &accept);
+  if(accept == -1 || accept == REST.type.TEXT_PLAIN) {
     REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
     snprintf((char *)buffer, REST_MAX_CHUNK_SIZE, "%d", battery);
 
     REST.set_response_payload(response, (uint8_t *)buffer, strlen((char *)buffer));
   }
-  else if (num && (accept[0]==REST.type.APPLICATION_JSON))
-  {
+  else if(accept == REST.type.APPLICATION_JSON) {
     REST.set_header_content_type(response, REST.type.APPLICATION_JSON);
     snprintf((char *)buffer, REST_MAX_CHUNK_SIZE, "{'battery':%d}", battery);
 
@@ -362,6 +330,8 @@ battery_handler(void* request, void* response, uint8_t *buffer, uint16_t preferr
     REST.set_response_payload(response, msg, strlen(msg));
   }
 }
+RESOURCE(res_battery, "title=\"Battery status\";rt=\"battery-mV\"", battery_handler, NULL, NULL, NULL);
+
 #endif /* PLATFORM_HAS_BATTERY */
 /******************************************************************************/
 
@@ -401,24 +371,21 @@ PROCESS_THREAD(rest_server_example, ev, data)
 
   /* Activate the application-specific resources. */
 #if REST_RES_INFO
-  rest_activate_resource(&resource_info);
+  rest_activate_resource(&res_info, "info");
 #endif
   /* Activate the application-specific resources. */
 #if REST_RES_RELAY
   SENSORS_ACTIVATE(relay_sensor);
-  rest_activate_resource(&resource_relay);
+  rest_activate_resource(&res_relay, "a/relay");
 #endif
 #if defined (PLATFORM_HAS_LEDS)
 #if REST_RES_LEDS
-  rest_activate_resource(&resource_leds);
-#endif
-#if REST_RES_TOGGLE
-  rest_activate_resource(&resource_toggle);
+  rest_activate_resource(&res_leds, "a/leds");
 #endif
 #endif /* PLATFORM_HAS_LEDS */
 #if defined (PLATFORM_HAS_BATTERY) && REST_RES_BATTERY
   SENSORS_ACTIVATE(battery_sensor);
-  rest_activate_resource(&resource_battery);
+  rest_activate_resource(&res_battery, "s/battery");
 #endif
 
   /* Define application-specific events here. */
