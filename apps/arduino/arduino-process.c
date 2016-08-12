@@ -77,13 +77,13 @@ extern volatile uint8_t mcusleepcycle;
 extern resource_t res_event, res_separate;
 #endif /* PLATFORM_HAS_BUTTON */
 
-volatile uint8_t mcusleepcycleval; 
+volatile uint8_t mcusleepcycleval;
 
 /*-------------- enabled sleep mode ----------------------------------------*/
 void
 mcu_sleep_init(void)
 {
-	mcusleepcycleval=mcusleepcycle; 
+	mcusleepcycleval=mcusleepcycle;
 }
 void
 mcu_sleep_on(void)
@@ -113,7 +113,7 @@ PROCESS(arduino_sketch, "Arduino Sketch Wrapper");
 PROCESS_THREAD(arduino_sketch, ev, data)
 {
   static struct etimer loop_periodic_timer;
-  
+
   PROCESS_BEGIN();
   adc_init ();
   mcu_sleep_init ();
@@ -138,7 +138,7 @@ PROCESS_THREAD(arduino_sketch, ev, data)
 
 	if(etimer_expired(&loop_periodic_timer)) {
         mcu_sleep_off();
-        loop ();			
+        loop ();
         mcu_sleep_on();
         etimer_reset(&loop_periodic_timer);
     }
