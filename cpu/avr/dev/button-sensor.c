@@ -27,7 +27,7 @@ ISR(INT4_vect)
   if(BUTTON_CHECK_IRQ()) {
     if(timer_expired(&debouncetimer)) {
   //  led1_on();
-      timer_set(&debouncetimer, CLOCK_SECOND / 4);
+      timer_set(&debouncetimer, CLOCK_SECOND / 8);
       sensors_changed(&button_sensor);
  //   led1_off();
     }
