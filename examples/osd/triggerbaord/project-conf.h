@@ -51,8 +51,8 @@
 //#define NETSTACK_CONF_RDC     nullrdc_driver
 
 /* Increase rpl-border-router IP-buffer when using more than 64. */
-#undef REST_MAX_CHUNK_SIZE
-#define REST_MAX_CHUNK_SIZE    64
+//#undef REST_MAX_CHUNK_SIZE
+//#define REST_MAX_CHUNK_SIZE    64
 
 /* Estimate your header size, especially when using Proxy-Uri. */
 /*
@@ -68,7 +68,7 @@
 
 /* Multiplies with chunk size, be aware of memory constraints. */
 #undef COAP_MAX_OPEN_TRANSACTIONS
-#define COAP_MAX_OPEN_TRANSACTIONS   4
+#define COAP_MAX_OPEN_TRANSACTIONS   8
 
 /* Must be <= open transaction number, default is COAP_MAX_OPEN_TRANSACTIONS-1. */
 /*
@@ -81,11 +81,5 @@
 #undef COAP_LINK_FORMAT_FILTERING
 #define COAP_LINK_FORMAT_FILTERING      0
 */
-
-
-
-
-
-
 
 #endif /* PROJECT_RPL_WEB_CONF_H_ */

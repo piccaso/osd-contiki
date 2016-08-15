@@ -39,6 +39,7 @@
 #include <string.h>
 #include "rest-engine.h"
 #include "er-coap.h"
+#include "dev/button-sensor.h"
 
 #define DEBUG 0
 #if DEBUG
@@ -76,8 +77,20 @@ static int32_t event_counter = 0;
 static void
 res_get_handler(void *request, void *response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
-  REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-  REST.set_response_payload(response, buffer, snprintf((char *)buffer, preferred_size, "EVENT %lu", event_counter));
+  int buttonstate = button_sensor.value(0);
+
+  unsigned int accept = -1;
+  REST.get_header_accept(request, &accept);
+  if(accept == -1 || accept == REST.type.TEXT_PLAIN) {
+    REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
+    REST.set_response_payload(response, buffer, snprintf((char *)buffer, preferred_size, "EVENT %lu STATE %d", event_counter, buttonstate));
+  } else if(accept == REST.type.APPLICATION_JSON) {
+    REST.set_header_content_type(response, REST.type.APPLICATION_JSON);
+    REST.set_response_payload(response, buffer, snprintf((char *)buffer, preferred_size, "{'EVENT':%lu ,'STATE': %d}", event_counter, buttonstate));
+  } else {
+    REST.set_response_status(response, REST.status.NOT_ACCEPTABLE);
+    REST.set_response_payload(response, buffer, snprintf((char *)buffer, preferred_size, "Supporting content-types text/plain and application/json"));
+  }
 
   /* A post_handler that handles subscriptions/observing will be called for periodic resources by the framework. */
 }
