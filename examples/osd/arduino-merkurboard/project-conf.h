@@ -44,10 +44,12 @@
 /* For projects, optimize memory and enable RDC again. */
 //#undef NETSTACK_CONF_RDC
 //#define NETSTACK_CONF_RDC     nullrdc_driver
+//#undef NETSTACK_CONF_MAC
+//#define  NETSTACK_CONF_MAC	nullmac_driver
 
 /* Increase rpl-border-router IP-buffer when using more than 64. */
-#undef REST_MAX_CHUNK_SIZE
-#define REST_MAX_CHUNK_SIZE    64
+//#undef REST_MAX_CHUNK_SIZE
+//#define REST_MAX_CHUNK_SIZE    64
 
 /* Estimate your header size, especially when using Proxy-Uri. */
 /*
@@ -76,11 +78,6 @@
 #undef COAP_LINK_FORMAT_FILTERING
 #define COAP_LINK_FORMAT_FILTERING      0
 */
-
-
-
-
-
 
 
 #endif /* PROJECT_RPL_WEB_CONF_H_ */
