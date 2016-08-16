@@ -24,7 +24,6 @@ ISR(INT4_vect)
 {
 
 //  leds_toggle(LEDS_RED);
-  
   if(BUTTON_CHECK_IRQ()) {
     if(timer_expired(&debouncetimer)) {
   //  led1_on();
