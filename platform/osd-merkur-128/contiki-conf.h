@@ -173,6 +173,8 @@ typedef unsigned short uip_stats_t;
 #define NETSTACK_CONF_RDC         sicslowmac_driver
 #define NETSTACK_CONF_FRAMER      framer_802154
 #define NETSTACK_CONF_RADIO       rf230_driver
+/* CCA theshold energy -91 to -61 dBm (default -77). Set this smaller than the $ */
+#define RF230_CONF_CCA_THRES    -85
 /* AUTOACK receive mode gives better rssi measurements, even if ACK is never requested */
 #define RF230_CONF_AUTOACK        1
 /* Request 802.15.4 ACK on all packets sent (else autoretry). This is primarily for testing. */
@@ -227,6 +229,7 @@ typedef unsigned short uip_stats_t;
 #define CONTIKIMAC_CONF_WITH_PHASE_OPTIMIZATION 0
 #define CONTIKIMAC_CONF_COMPOWER                1
 #define RIMESTATS_CONF_ENABLED                  0
+#define WITH_FAST_SLEEP                         0
 
 #if NETSTACK_CONF_WITH_IPV6
 #define NETSTACK_CONF_FRAMER      framer_802154
