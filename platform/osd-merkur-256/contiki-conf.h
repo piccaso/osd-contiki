@@ -247,6 +247,8 @@ typedef unsigned short uip_stats_t;
 #define RF230_CONF_FRAME_RETRIES  1
 /* Long csma backoffs will compromise radio cycling; set to 0 for 1 csma */
 #define RF230_CONF_CSMA_RETRIES   0
+/* CCA theshold energy -91 to -61 dBm (default -77). Set this smaller than the $ */
+#define RF230_CONF_CCA_THRES    -90
 #define SICSLOWPAN_CONF_FRAG      1
 #define SICSLOWPAN_CONF_MAXAGE    3
 /* 211 bytes per queue buffer. Contikimac burst mode needs 15 for a 1280 byte MTU */
