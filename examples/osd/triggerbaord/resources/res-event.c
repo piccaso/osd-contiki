@@ -93,6 +93,9 @@ res_get_handler(void *request, void *response, uint8_t *buffer, uint16_t preferr
   }
 
   /* A post_handler that handles subscriptions/observing will be called for periodic resources by the framework. */
+	
+	// tell client when to schedule re-registration: 1 Hour
+	REST.set_header_max_age(response, /* uint32_t, Seconds */ 3600);
 }
 /*
  * Additionally, res_event_handler must be implemented for each EVENT_RESOURCE.
