@@ -45,11 +45,13 @@ void setup (void)
     SENSORS_ACTIVATE(button_sensor);
     // init coap resourcen
     rest_init_engine ();
+    #pragma GCC diagnostic ignored "-Wwrite-strings"
     rest_activate_resource (&res_led, "s/led");
     rest_activate_resource (&res_bled, "s/bled");
     rest_activate_resource (&res_battery, "s/battery");
     rest_activate_resource (&res_cputemp, "s/cputemp");
     rest_activate_resource(&res_event, "s/button");         
+    #pragma GCC diagnostic pop
 
 //    NETSTACK_MAC.off(1);
 }
