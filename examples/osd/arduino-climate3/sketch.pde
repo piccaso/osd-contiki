@@ -120,7 +120,7 @@ void setup (void)
     rest_init_engine ();
     rest_activate_resource (&res_htu21dtemp, "s/temp");
     rest_activate_resource (&res_htu21dhum, "s/hum");
-    rest_activate_resource (&res_dtemp1, "s/t1/temp");
+    rest_activate_resource (&res_dtemp1, "s/tempd");
     rest_activate_resource (&res_battery, "s/battery");
 }
 
@@ -148,6 +148,9 @@ void loop (void)
       }
       if(htu21d_hum_s[0]==' '){
         memcpy (htu21d_hum_s,htu21d_hum_s+1,strlen(htu21d_hum_s)+1);
+      }
+      if(d_temp_s[0]==' '){
+        memcpy (d_temp_s,d_temp_s+1,strlen(d_temp_s)+1);
       }
       
 //  debug only   
