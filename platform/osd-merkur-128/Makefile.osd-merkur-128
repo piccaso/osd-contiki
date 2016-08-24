@@ -85,7 +85,7 @@ include $(CONTIKIAVR)/Makefile.avr
 include $(CONTIKIAVR)/radio/Makefile.radio
 
 MODULES += core/net/mac  core/net core/net/mac/sicslowmac \
-    core/net/mac/contikimac core/net/llsec \
+    core/net/mac/contikimac core/net/llsec core/net/llsec/noncoresec \
 #     core/net/ipv6 core/net/ipv4 core/net/ip \
 #     core/net/rime \
 #     core/net/rpl \

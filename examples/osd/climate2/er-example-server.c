@@ -82,7 +82,7 @@ extern resource_t res_ds1820;
 #endif
 
 #if defined (PLATFORM_HAS_LEDS)
-#include "dev/leds.h"
+#include "dev/led.h"
 extern resource_t res_leds;
 #endif
 
@@ -100,7 +100,8 @@ void
 hw_init()
 {
 #if defined (PLATFORM_HAS_LEDS)
- leds_off(LEDS_RED);
+// leds_off(LEDS_RED);
+led1_off();
 #endif
 #if PLATFORM_HAS_DS1820
   ds1820_temp();
@@ -139,10 +140,10 @@ PROCESS_THREAD(rest_server_example, ev, data)
   PRINTF("REST max chunk: %u\n", REST_MAX_CHUNK_SIZE);
 
 /* if static routes are used rather than RPL */
-#if !UIP_CONF_IPV6_RPL && !defined (CONTIKI_TARGET_MINIMAL_NET) && !defined (CONTIKI_TARGET_NATIVE)
-  set_global_address();
-  configure_routing();
-#endif
+//#if !UIP_CONF_IPV6_RPL && !defined (CONTIKI_TARGET_MINIMAL_NET) && !defined (CONTIKI_TARGET_NATIVE)
+//  set_global_address();
+//  configure_routing();
+//#endif
 
   /* Initialize the OSD Hardware. */
   hw_init();

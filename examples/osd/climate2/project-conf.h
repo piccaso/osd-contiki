@@ -41,11 +41,11 @@
 
 
 /* Some platforms have weird includes. */
-#undef IEEE802154_CONF_PANID
+//#undef IEEE802154_CONF_PANID
 
 
 /* Save energy */
-#define RDC_CONF_PT_YIELD_OFF
+//#define RDC_CONF_PT_YIELD_OFF
 
 /* Disabling RDC for demo purposes. Core updates often require more memory. */
 /* For projects, optimize memory and enable RDC again. */

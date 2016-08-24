@@ -1796,7 +1796,8 @@ rf230_cca(void)
 // if (cca & 0x40) {/*DEBUGFLOW('3')*/;} else {rf230_pending=1;DEBUGFLOW('4');}  
    if (cca & 0x40) {
 //   DEBUGFLOW('5');
-	 return 1;
+//	 return 1;
+         return 0;
    } else {
 //  DEBUGFLOW('6');
  busyexit:
