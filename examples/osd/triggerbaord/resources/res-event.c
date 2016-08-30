@@ -40,6 +40,7 @@
 #include "rest-engine.h"
 #include "er-coap.h"
 #include "dev/button-sensor.h"
+#include "Arduino.h"
 
 #define DEBUG 0
 #if DEBUG
@@ -73,11 +74,14 @@ EVENT_RESOURCE(res_event,
  * Use local resource state that is accessed by res_get_handler() and altered by res_event_handler() or PUT or POST.
  */
 static int32_t event_counter = 0;
+extern  uint8_t led_pin;
 
 static void
 res_get_handler(void *request, void *response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
   int buttonstate = button_sensor.value(0);
+  if(buttonstate == 0) digitalWrite(led_pin, LOW);
+  else digitalWrite(led_pin, HIGH);
 
   unsigned int accept = -1;
   REST.get_header_accept(request, &accept);
