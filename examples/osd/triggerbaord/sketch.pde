@@ -53,7 +53,7 @@ void setup (void)
     rest_activate_resource(&res_event, "s/button");         
     #pragma GCC diagnostic pop
 
-//    NETSTACK_MAC.off(1);
+    NETSTACK_MAC.off(1);
 }
 
 void loop (void)
