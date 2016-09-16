@@ -12,6 +12,7 @@ static struct timer debouncetimer;
 static int status(int type);
 static int enabled = 0;
 volatile static int bstate;
+volatile static int bstatei;
 struct sensors_sensor *sensors[1];
 unsigned char sensors_flags[1];
 
@@ -22,18 +23,18 @@ unsigned char sensors_flags[1];
 /*---------------------------------------------------------------------------*/
 ISR(INT4_vect)
 {
-
-//  leds_toggle(LEDS_RED);
   if(BUTTON_CHECK_IRQ()) {
+    bstatei = (PINE & _BV(PE4) ? 0 : 1);
     if(timer_expired(&debouncetimer)) {
-  //  led1_on();
-      timer_set(&debouncetimer, CLOCK_SECOND / 8);
+//  led1_on();
+      timer_set(&debouncetimer, CLOCK_SECOND / 16);
       bstate = (PINE & _BV(PE4) ? 0 : 1);
-      sensors_changed(&button_sensor);
+      if(bstate == bstatei){
+        sensors_changed(&button_sensor);
+      }
  //   led1_off();
     }
   }
-
 }
 /*---------------------------------------------------------------------------*/
 
