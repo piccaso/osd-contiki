@@ -38,6 +38,9 @@
 
 #define LOOP_INTERVAL		(10 * CLOCK_SECOND)
 
+/* Seeping nodes are host nodes without routing features */
+#define UIP_CONF_ROUTER 0
+
 /* For Debug: Dont allow MCU sleeping between channel checks */
 //#undef RDC_CONF_MCU_SLEEP
 //#define RDC_CONF_MCU_SLEEP       0
