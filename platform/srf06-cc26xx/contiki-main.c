@@ -60,6 +60,7 @@
 #include "sys/clock.h"
 #include "sys/rtimer.h"
 #include "sys/node-id.h"
+#include "lib/random.h"
 #include "lib/sensors.h"
 #include "button-sensor.h"
 #include "dev/serial-line.h"
@@ -148,11 +149,6 @@ main(void)
 
   /* Set the LF XOSC as the LF system clock source */
   oscillators_select_lf_xosc();
-
-#if CC2650_FAST_RADIO_STARTUP
-  /* Also request HF XOSC to start up */
-  oscillators_request_hf_xosc();
-#endif
 
   lpm_init();
 
