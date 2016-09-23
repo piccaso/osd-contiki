@@ -502,10 +502,9 @@ powercycle(struct rtimer *t, void *ptr)
       ensure an occasional wake cycle or foreground processing will
       be blocked until a packet is detected */
 #if RDC_CONF_MCU_SLEEP
-
       static uint8_t sleepcycle;
-      if((sleepcycle++ < mcusleepcycle) && !we_are_sending && !radio_is_on) {
-        rtimer_arch_sleep(RTIMER_NOW() - cycle_start);
+      if((sleepcycle++ < mcusleepcycle) && !we_are_sending && !radio_is_on && !(NETSTACK_RADIO.receiving_packet() || NETSTACK_RADIO.pending_packet())) {
+          rtimer_arch_sleep(cycle_start - RTIMER_NOW());
       } else {
         sleepcycle = 0;
 #ifndef RDC_CONF_PT_YIELD_OFF
