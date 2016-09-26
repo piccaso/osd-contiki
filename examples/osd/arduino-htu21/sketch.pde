@@ -42,10 +42,12 @@ void setup (void)
     rest_activate_resource (&res_htu21dtemp, "s/temp");
     rest_activate_resource (&res_htu21dhum, "s/hum");
     rest_activate_resource (&res_battery, "s/battery");
+    
+ //   mcu_sleep_set(64);
 }
 
 // at project-conf.h
-// LOOP_INTERVAL		(10 * CLOCK_SECOND)
+// LOOP_INTERVAL		(30 * CLOCK_SECOND)
 void loop (void)
 {
 	mcu_sleep_off();
