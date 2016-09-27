@@ -37,12 +37,12 @@ uint8_t bled_status;
 // should be the same :-)
 #define UIP_NTOHS(x) UIP_HTONS(x)
 #define SERVER_NODE(ip) \
-    uip_ip6addr(ip,0xfe80,0,0,0,0,0,0,0x01)
+    uip_ip6addr(ip,0xaaaa,0,0,0,0,0,0,0x01)
 
 uip_ipaddr_t server_ipaddr, tmp_addr;
 char         server_resource [20] = "button";
 
-extern int32_t event_counter; 
+static int32_t levent_counter; 
 
 #define NUM_LEDS  1
 
@@ -81,10 +81,11 @@ void setup (void)
 int coap_server_post(void)
 {
     static coap_packet_t request [1]; /* Array: treat as pointer */
-    char buf [9];
+    char buf [25];
+    printf("post\n");
     coap_transaction_t *transaction;
     int buttonstate = button_sensor.value(0);
-    sprintf (buf, "state=%d&event=%lu",buttonstate,event_counter);
+    sprintf (buf, "state=%d&event=%lu",buttonstate,levent_counter++);
 //  printf ("%s\n", buf);
     coap_init_message (request, COAP_TYPE_NON, COAP_PUT, 0);
     coap_set_header_uri_path (request, server_resource);
@@ -101,14 +102,22 @@ int coap_server_post(void)
 
 void loop (void)
 {
+// test caop srever post
+
+   static int buttonstate = 1;
+   
+   if(buttonstate != button_sensor.value(0)){
+     coap_server_post();
+     buttonstate=button_sensor.value(0);
+   }
 // test chainable led
-  static byte power=0;
-  for (byte i=0; i<NUM_LEDS; i++)
-  {
-    if (i%2 == 0)
-      leds.setColorRGB(i, power, 0, 0);
-    else
-      leds.setColorRGB(i, 0, 255-power, 0);
-  }
-  power+= 10;
+   static byte power=0;
+   for (byte i=0; i<NUM_LEDS; i++)
+   {
+     if (i%2 == 0)
+       leds.setColorRGB(i, power, 0, 0);
+     else
+       leds.setColorRGB(i, 0, 255-power, 0);
+   }
+   power+= 10;
 }
