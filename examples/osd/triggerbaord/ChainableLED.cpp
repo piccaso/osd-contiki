@@ -135,9 +135,9 @@ void ChainableLED::setColorHSB(byte led, float hue, float saturation, float brig
 {
     float r, g, b;
     
-    constrain(hue, 0.0, 1.0);
-    constrain(saturation, 0.0, 1.0);
-    constrain(brightness, 0.0, 1.0);
+    hue=constrain(hue, 0.0, 1.0);
+    saturation=constrain(saturation, 0.0, 1.0);
+    brightness=constrain(brightness, 0.0, 1.0);
 
     if(saturation == 0.0)
     {
