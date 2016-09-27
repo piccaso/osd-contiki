@@ -16,6 +16,7 @@ extern "C" {
 #include "er-coap-engine.h"
 #include "net/netstack.h"
 #include "dev/button-sensor.h"
+#include "ChainableLED.h"
 
 extern resource_t 
     res_led,
@@ -42,7 +43,12 @@ uip_ipaddr_t server_ipaddr, tmp_addr;
 char         server_resource [20] = "button";
 
 extern int32_t event_counter; 
-   
+
+#define NUM_LEDS  1
+
+// Merkurboard grove i2c D8, D9
+ChainableLED leds(8, 9, NUM_LEDS);
+
 void setup (void)
 {
     // switch off the led
@@ -53,6 +59,8 @@ void setup (void)
     pinMode(bled_pin, OUTPUT);
     digitalWrite(bled_pin, LOW);
     bled_status=0;
+    // init chainable led
+    leds.init();
     // sensors
     SENSORS_ACTIVATE(button_sensor);
     // init coap resourcen
@@ -93,5 +101,14 @@ int coap_server_post(void)
 
 void loop (void)
 {
-
+// test chainable led
+  static byte power=0;
+  for (byte i=0; i<NUM_LEDS; i++)
+  {
+    if (i%2 == 0)
+      leds.setColorRGB(i, power, 0, 0);
+    else
+      leds.setColorRGB(i, 0, 255-power, 0);
+  }
+  power+= 10;
 }
