@@ -14,6 +14,7 @@ extern "C" {
 #include "arduino-process.h"
 #include "rest-engine.h"
 #include "er-coap-engine.h"
+#include "generic_resource.h"
 #include "net/netstack.h"
 #include "dev/button-sensor.h"
 #include "ChainableLED.h"
@@ -49,6 +50,58 @@ static int32_t levent_counter;
 // Merkurboard grove i2c D8, D9
 ChainableLED leds(8, 9, NUM_LEDS);
 
+uint8_t color_rgb [3] = {0, 0, 0};
+static uint8_t name_to_offset (const char * name)
+{
+  uint8_t offset = 0;
+  if (0 == strcmp (name, "green")) {
+    offset = 1;
+  } else if (0 == strcmp (name, "blue")) {
+    offset = 2;
+  }
+  return offset;
+}
+
+static size_t
+color_to_string (const char *name, const char *uri, char *buf, size_t bsize)
+{
+  return snprintf (buf, bsize, "%d", color_rgb [name_to_offset (name)]);
+}
+
+int color_from_string (const char *name, const char *uri, const char *s)
+{
+    color_rgb [name_to_offset (name)] = atoi (s);
+    leds.setColorRGB(0,color_rgb [0], color_rgb [1], color_rgb [2]);
+    return 0;
+}
+
+GENERIC_RESOURCE
+  ( red
+  , RED_LED
+  , s
+  , 1
+  , color_from_string
+  , color_to_string
+  );
+
+GENERIC_RESOURCE
+  ( green
+  , GREEN_LED
+  , s
+  , 1
+  , color_from_string
+  , color_to_string
+  );
+
+GENERIC_RESOURCE
+  ( blue
+  , BLUE_LED
+  , s
+  , 1
+  , color_from_string
+  , color_to_string
+  );
+
 void setup (void)
 {
     // switch off the led
@@ -61,6 +114,7 @@ void setup (void)
     bled_status=0;
     // init chainable led
     leds.init();
+    leds.setColorRGB(0,color_rgb [0], color_rgb [1], color_rgb [2]);
     // sensors
     SENSORS_ACTIVATE(button_sensor);
     // init coap resourcen
@@ -71,7 +125,10 @@ void setup (void)
     rest_activate_resource (&res_bled, "s/bled");
     rest_activate_resource (&res_battery, "s/battery");
     rest_activate_resource (&res_cputemp, "s/cputemp");
-    rest_activate_resource(&res_event, "s/button");         
+    rest_activate_resource(&res_event, "s/button");
+    rest_activate_resource (&res_red,   "led/R");
+    rest_activate_resource (&res_green, "led/G");
+    rest_activate_resource (&res_blue,  "led/B");         
     #pragma GCC diagnostic pop
 
 //    mcu_sleep_set(64);
@@ -111,6 +168,7 @@ void loop (void)
      buttonstate=button_sensor.value(0);
    }
 // test chainable led
+/*
    static byte power=0;
    for (byte i=0; i<NUM_LEDS; i++)
    {
@@ -120,4 +178,5 @@ void loop (void)
        leds.setColorRGB(i, 0, 255-power, 0);
    }
    power+= 10;
+*/
 }

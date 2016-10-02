@@ -46,6 +46,7 @@ SMALL=1
 APPS += er-coap
 APPS += rest-engine
 APPS += arduino
+APPS += json json-resource
 
 include $(CONTIKI)/Makefile.include
 include $(CONTIKI)/apps/arduino/Makefile.include
