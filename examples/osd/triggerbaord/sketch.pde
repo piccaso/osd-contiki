@@ -75,6 +75,7 @@ int color_from_string (const char *name, const char *uri, const char *s)
     return 0;
 }
 
+#pragma GCC diagnostic ignored "-Wwrite-strings"
 GENERIC_RESOURCE
   ( red
   , RED_LED
@@ -101,6 +102,7 @@ GENERIC_RESOURCE
   , color_from_string
   , color_to_string
   );
+#pragma GCC diagnostic pop
 
 void setup (void)
 {
