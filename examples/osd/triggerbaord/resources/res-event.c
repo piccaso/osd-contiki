@@ -101,10 +101,14 @@ res_get_handler(void *request, void *response, uint8_t *buffer, uint16_t preferr
  * Additionally, res_event_handler must be implemented for each EVENT_RESOURCE.
  * It is called through <res_name>.trigger(), usually from the server process.
  */
+static int last_buttonstate = 1; /* initial button state - up */
 static void
 res_event_handler(void)
 {
-  /* Do the update triggered by the event here, e.g., sampling a sensor. */
+  /* only notify subscribers about changes */
+  int buttonstate = button_sensor.value(0);
+  if(buttonstate == last_buttonstate) return;
+  last_buttonstate = buttonstate;
   ++event_counter;
 
   /* Usually a condition is defined under with subscribers are notified, e.g., event was above a threshold. */
