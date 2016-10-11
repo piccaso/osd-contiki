@@ -13,7 +13,7 @@
  * Note the parameters in this file can be changed without forcing a complete rebuild.
  */
 // default settings
-#define CHANNEL_802_15_4          25     // default frequency (11-26) 
+#define CHANNEL_802_15_4          11     // default frequency (11-26) 
 
 // end default settings
 
