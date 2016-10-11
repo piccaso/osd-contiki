@@ -143,7 +143,7 @@ int coap_server_post(void)
     char buf [25];
     printf("post\n");
     coap_transaction_t *transaction;
-    int buttonstate = button_sensor.value(0);
+    int buttonstate = !button_sensor.value(0);
     sprintf (buf, "state=%d&event=%lu",buttonstate,levent_counter++);
 //  printf ("%s\n", buf);
     coap_init_message (request, COAP_TYPE_NON, COAP_PUT, 0);

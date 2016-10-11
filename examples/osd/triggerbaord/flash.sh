@@ -1,2 +1,2 @@
 #!/bin/bash
-make TARGET=osd-merkur-128 flash
+make TARGET=osd-merkur-256 AVRDUDE_PORT=/dev/ttyUSB0 flash
