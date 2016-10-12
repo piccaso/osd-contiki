@@ -11,7 +11,7 @@
  */
 
 extern "C" {
-#include "arduino-process.h"
+#include "opentrigger.h"
 #include "rest-engine.h"
 #include "er-coap-engine.h"
 #include "generic_resource.h"
