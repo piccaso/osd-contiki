@@ -481,8 +481,8 @@ powercycle(struct rtimer *t, void *ptr)
           break;
         }
 
-        schedule_powercycle(t, CCA_CHECK_TIME + CCA_SLEEP_TIME);
-        PT_YIELD(&pt);
+      //  schedule_powercycle(t, CCA_CHECK_TIME + CCA_SLEEP_TIME);
+      //  PT_YIELD(&pt);
       }
       if(radio_is_on) {
         if(!(NETSTACK_RADIO.receiving_packet() ||
