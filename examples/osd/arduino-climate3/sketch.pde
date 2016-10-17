@@ -118,10 +118,12 @@ void setup (void)
     }
     // init coap resourcen
     rest_init_engine ();
+    #pragma GCC diagnostic ignored "-Wwrite-strings"
     rest_activate_resource (&res_htu21dtemp, "s/temp");
     rest_activate_resource (&res_htu21dhum, "s/hum");
     rest_activate_resource (&res_dtemp1, "s/tempd");
     rest_activate_resource (&res_battery, "s/battery");
+    #pragma GCC diagnostic pop
 }
 
 // at project-conf.h
