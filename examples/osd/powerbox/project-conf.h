@@ -36,8 +36,9 @@
 #define PLATFORM_HAS_RELAY  1
 #define PLATFORM_HAS_BATTERY 1
 
-/* Some platforms have weird includes. */
-#undef IEEE802154_CONF_PANID
+/* For Debug: Dont allow MCU sleeping between channel checks */
+#undef RDC_CONF_MCU_SLEEP
+#define RDC_CONF_MCU_SLEEP       0
 
 /* Disabling RDC for demo purposes. Core updates often require more memory. */
 /* For projects, optimize memory and enable RDC again. */

@@ -368,7 +368,7 @@ PROCESS_THREAD(rest_server_example, ev, data)
   hw_init();
   /* Initialize the REST engine. */
   rest_init_engine();
-
+  NETSTACK_MAC.off(1);
   /* Activate the application-specific resources. */
 #if REST_RES_INFO
   rest_activate_resource(&res_info, "info");
