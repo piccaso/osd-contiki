@@ -43,8 +43,7 @@ void setup (void)
     rest_activate_resource (&res_htu21dhum, "s/hum");
     rest_activate_resource (&res_battery, "s/battery");
     
- //   mcu_sleep_set(64);
-    mcu_sleep_set(48);
+    mcu_sleep_set(128); // Power consumtion 278uA; average over 20 minutes
 }
 
 // at project-conf.h
