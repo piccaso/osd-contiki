@@ -44,6 +44,7 @@ void setup (void)
     rest_activate_resource (&res_battery, "s/battery");
     
  //   mcu_sleep_set(64);
+    mcu_sleep_set(48);
 }
 
 // at project-conf.h
