@@ -289,9 +289,15 @@ off(void)
   }
 }
 /*---------------------------------------------------------------------------*/
-static volatile rtimer_clock_t cycle_start;
 static void powercycle_wrapper(struct rtimer *t, void *ptr);
 static char powercycle(struct rtimer *t, void *ptr);
+/*---------------------------------------------------------------------------*/
+static volatile rtimer_clock_t cycle_start;
+#if SYNC_CYCLE_STARTS
+static volatile rtimer_clock_t sync_cycle_start;
+static volatile uint8_t sync_cycle_phase;
+#endif
+/*---------------------------------------------------------------------------*/
 static void
 schedule_powercycle(struct rtimer *t, rtimer_clock_t time)
 {
@@ -340,7 +346,7 @@ powercycle_turn_radio_off(void)
 #if CONTIKIMAC_CONF_COMPOWER
   uint8_t was_on = radio_is_on;
 #endif /* CONTIKIMAC_CONF_COMPOWER */
-  
+
   if(we_are_sending == 0 && we_are_receiving_burst == 0) {
     off();
 #if CONTIKIMAC_CONF_COMPOWER
@@ -367,13 +373,34 @@ powercycle_wrapper(struct rtimer *t, void *ptr)
   powercycle(t, ptr);
 }
 /*---------------------------------------------------------------------------*/
+static void
+advance_cycle_start(void)
+{
+  #if SYNC_CYCLE_STARTS
+
+  /* Compute cycle start when RTIMER_ARCH_SECOND is not a multiple
+  of CHANNEL_CHECK_RATE */
+  if(sync_cycle_phase++ == NETSTACK_RDC_CHANNEL_CHECK_RATE) {
+    sync_cycle_phase = 0;
+    sync_cycle_start += RTIMER_ARCH_SECOND;
+    cycle_start = sync_cycle_start;
+  } else if( (RTIMER_ARCH_SECOND * NETSTACK_RDC_CHANNEL_CHECK_RATE) > 65535) {
+    uint32_t phase_time = sync_cycle_phase*RTIMER_ARCH_SECOND;
+
+    cycle_start = sync_cycle_start + phase_time/NETSTACK_RDC_CHANNEL_CHECK_RATE;
+  } else {
+    unsigned phase_time = sync_cycle_phase*RTIMER_ARCH_SECOND;
+
+    cycle_start = sync_cycle_start + phase_time/NETSTACK_RDC_CHANNEL_CHECK_RATE;
+  }
+  #endif
+
+  cycle_start += CYCLE_TIME;
+}
+/*---------------------------------------------------------------------------*/
 static char
 powercycle(struct rtimer *t, void *ptr)
 {
-#if SYNC_CYCLE_STARTS
-  static volatile rtimer_clock_t sync_cycle_start;
-  static volatile uint8_t sync_cycle_phase;
-#endif
 
   PT_BEGIN(&pt);
 
@@ -386,24 +413,6 @@ powercycle(struct rtimer *t, void *ptr)
   while(1) {
     static uint8_t packet_seen;
     static uint8_t count;
-
-#if SYNC_CYCLE_STARTS
-    /* Compute cycle start when RTIMER_ARCH_SECOND is not a multiple
-       of CHANNEL_CHECK_RATE */
-    if(sync_cycle_phase++ == NETSTACK_RDC_CHANNEL_CHECK_RATE) {
-      sync_cycle_phase = 0;
-      sync_cycle_start += RTIMER_ARCH_SECOND;
-      cycle_start = sync_cycle_start;
-    } else {
-#if (RTIMER_ARCH_SECOND * NETSTACK_RDC_CHANNEL_CHECK_RATE) > 65535
-      cycle_start = sync_cycle_start + ((unsigned long)(sync_cycle_phase*RTIMER_ARCH_SECOND))/NETSTACK_RDC_CHANNEL_CHECK_RATE;
-#else
-      cycle_start = sync_cycle_start + (sync_cycle_phase*RTIMER_ARCH_SECOND)/NETSTACK_RDC_CHANNEL_CHECK_RATE;
-#endif
-    }
-#else
-    cycle_start += CYCLE_TIME;
-#endif
 
     packet_seen = 0;
 
@@ -472,8 +481,8 @@ powercycle(struct rtimer *t, void *ptr)
           break;
         }
 
-        schedule_powercycle(t, CCA_CHECK_TIME + CCA_SLEEP_TIME);
-        PT_YIELD(&pt);
+      //  schedule_powercycle(t, CCA_CHECK_TIME + CCA_SLEEP_TIME);
+      //  PT_YIELD(&pt);
       }
       if(radio_is_on) {
         if(!(NETSTACK_RADIO.receiving_packet() ||
@@ -485,24 +494,26 @@ powercycle(struct rtimer *t, void *ptr)
       }
     }
 
-    if(RTIMER_CLOCK_LT(RTIMER_NOW() - cycle_start, CYCLE_TIME - CHECK_TIME * 4)) {
+    advance_cycle_start();
+
+    if(RTIMER_CLOCK_LT(RTIMER_NOW() , cycle_start - CHECK_TIME * 4)) {
       /* Schedule the next powercycle interrupt, or sleep the mcu
-	 until then.  Sleeping will not exit from this interrupt, so
-	 ensure an occasional wake cycle or foreground processing will
-	 be blocked until a packet is detected */
+      until then.  Sleeping will not exit from this interrupt, so
+      ensure an occasional wake cycle or foreground processing will
+      be blocked until a packet is detected */
 #if RDC_CONF_MCU_SLEEP
       static uint8_t sleepcycle;
-      if((sleepcycle++ < mcusleepcycle) && !we_are_sending && !radio_is_on) {
-        rtimer_arch_sleep(CYCLE_TIME - (RTIMER_NOW() - cycle_start));
+      if((sleepcycle++ < mcusleepcycle) && !we_are_sending && !radio_is_on && !(NETSTACK_RADIO.receiving_packet() || NETSTACK_RADIO.pending_packet())) {
+          rtimer_arch_sleep(cycle_start - RTIMER_NOW());
       } else {
         sleepcycle = 0;
 #ifndef RDC_CONF_PT_YIELD_OFF
-        schedule_powercycle_fixed(t, CYCLE_TIME + cycle_start);
+        schedule_powercycle_fixed(t, cycle_start);
         PT_YIELD(&pt);
 #endif
       }
 #else
-      schedule_powercycle_fixed(t, CYCLE_TIME + cycle_start);
+      schedule_powercycle_fixed(t, cycle_start);
       PT_YIELD(&pt);
 #endif
     }
@@ -553,13 +564,13 @@ send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
   int len;
   uint8_t seqno;
 #endif
-  
+
   /* Exit if RDC and radio were explicitly turned off */
    if(!contikimac_is_on && !contikimac_keep_radio_on) {
     PRINTF("contikimac: radio is turned off\n");
     return MAC_TX_ERR_FATAL;
   }
- 
+
   if(packetbuf_totlen() == 0) {
     PRINTF("contikimac: send_packet data len 0\n");
     return MAC_TX_ERR_FATAL;
@@ -601,10 +612,10 @@ send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
       return MAC_TX_ERR_FATAL;
     }
   }
-  
+
   transmit_len = packetbuf_totlen();
   NETSTACK_RADIO.prepare(packetbuf_hdrptr(), transmit_len);
-  
+
   if(!is_broadcast && !is_receiver_awake) {
 #if WITH_PHASE_OPTIMIZATION
     ret = phase_wait(packetbuf_addr(PACKETBUF_ADDR_RECEIVER),
@@ -616,9 +627,9 @@ send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
     if(ret != PHASE_UNKNOWN) {
       is_known_receiver = 1;
     }
-#endif /* WITH_PHASE_OPTIMIZATION */ 
+#endif /* WITH_PHASE_OPTIMIZATION */
   }
-  
+
 
 
   /* By setting we_are_sending to one, we ensure that the rtimer
@@ -636,7 +647,7 @@ send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
            NETSTACK_RADIO.receiving_packet(), NETSTACK_RADIO.pending_packet());
     return MAC_TX_COLLISION;
   }
-  
+
   /* Switch off the radio to ensure that we didn't start sending while
      the radio was doing a channel check. */
   off();
@@ -844,7 +855,7 @@ qsend_list(mac_callback_t sent, void *ptr, struct rdc_buf_list *buf_list)
   int ret;
   int is_receiver_awake;
   int pending;
-  
+
   if(buf_list == NULL) {
     return;
   }
@@ -856,7 +867,7 @@ qsend_list(mac_callback_t sent, void *ptr, struct rdc_buf_list *buf_list)
     mac_call_sent_callback(sent, ptr, MAC_TX_COLLISION, 1);
     return;
   }
-  
+
   /* Create and secure frames in advance */
   curr = buf_list;
   do {
@@ -873,13 +884,13 @@ qsend_list(mac_callback_t sent, void *ptr, struct rdc_buf_list *buf_list)
         mac_call_sent_callback(sent, ptr, MAC_TX_ERR_FATAL, 1);
         return;
       }
-      
+
       packetbuf_set_attr(PACKETBUF_ATTR_IS_CREATED_AND_SECURED, 1);
       queuebuf_update_from_packetbuf(curr->buf);
     }
     curr = next;
   } while(next != NULL);
-  
+
   /* The receiver needs to be awoken before we send */
   is_receiver_awake = 0;
   curr = buf_list;

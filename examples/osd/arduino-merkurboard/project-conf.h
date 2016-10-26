@@ -36,6 +36,9 @@
 //#define PLATFORM_HAS_BUTTON  1
 #define PLATFORM_HAS_BATTERY 1
 
+/* Save energy */
+//#define RDC_CONF_PT_YIELD_OFF
+
 /* For Debug: Dont allow MCU sleeping between channel checks */
 //#undef RDC_CONF_MCU_SLEEP
 //#define RDC_CONF_MCU_SLEEP       0
