@@ -21,7 +21,8 @@ extern "C" {
 
 extern resource_t 
     res_led,
-    res_bled, 
+    res_bled,
+    res_rgb, 
     res_battery, 
     res_cputemp,
     res_event,
@@ -51,6 +52,7 @@ static int32_t levent_counter;
 ChainableLED leds(8, 9, NUM_LEDS);
 
 uint8_t color_rgb [3] = {0, 0, 0};
+
 static uint8_t name_to_offset (const char * name)
 {
   uint8_t offset = 0;
@@ -104,6 +106,76 @@ GENERIC_RESOURCE
   );
 #pragma GCC diagnostic pop
 
+static void res_get_handler(void *request, void *response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset);
+static void res_post_put_handler(void *request, void *response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset);
+
+/* A simple getter example. Returns the reading from the sensor with a simple etag */
+RESOURCE(res_rgb,
+         "title=\"LED: , POST/PUT mode=on|off\";rt=\"Control\"",
+         res_get_handler,
+         res_post_put_handler,
+         res_post_put_handler,
+         NULL);
+
+static void
+res_get_handler(void *request, void *response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+{
+  unsigned int accept = -1;
+  REST.get_header_accept(request, &accept);
+
+  if(accept == -1 || accept == REST.type.TEXT_PLAIN) {
+    REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
+    snprintf((char *)buffer, REST_MAX_CHUNK_SIZE, "%d %d %d",color_rgb [0],color_rgb [1],color_rgb [2] );
+
+    REST.set_response_payload(response, buffer, strlen((char *)buffer));
+  } else if(accept == REST.type.APPLICATION_JSON) {
+    REST.set_header_content_type(response, REST.type.APPLICATION_JSON);
+    snprintf((char *)buffer, REST_MAX_CHUNK_SIZE, "{'r':%d\n,'g':%d\n,'b':%d}",color_rgb [0],color_rgb [1],color_rgb [2]);
+
+    REST.set_response_payload(response, buffer, strlen((char *)buffer));
+  } else {
+    REST.set_response_status(response, REST.status.NOT_ACCEPTABLE);
+    const char *msg = "Supporting content-types text/plain and application/json";
+    REST.set_response_payload(response, msg, strlen(msg));
+  }
+}
+
+static void
+res_post_put_handler(void *request, void *response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+{
+  size_t len = 0;
+  const char *valr = NULL;
+  const char *valg = NULL;
+  const char *valb = NULL;
+  int success = 1;
+
+  if(success && (len = REST.get_post_variable(request, "r", &valr))) {
+    if(len != 0) {
+		    color_rgb [0] = atoi (valr);
+    } else {
+      success = 0;
+    }
+    if(success && (len = REST.get_post_variable(request, "g", &valg))) {
+      if(len != 0) {
+		    color_rgb [1] = atoi (valg);
+      } else {
+        success = 0;
+      }
+    }
+    if(success && (len = REST.get_post_variable(request, "b", &valb))) {
+      if(len != 0) {
+		    color_rgb [2] = atoi (valb);
+      } else {
+        success = 0;
+      }
+    }
+  } else {
+    success = 0;
+  } if(!success) {
+    REST.set_response_status(response, REST.status.BAD_REQUEST);
+  }
+}
+
 void setup (void)
 {
     // switch off the led
@@ -131,6 +203,7 @@ void setup (void)
     rest_activate_resource (&res_red,   "led/R");
     rest_activate_resource (&res_green, "led/G");
     rest_activate_resource (&res_blue,  "led/B");         
+    rest_activate_resource (&res_rgb,  "led/RGB");         
     #pragma GCC diagnostic pop
 
 //    mcu_sleep_set(64);
