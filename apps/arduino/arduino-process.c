@@ -56,7 +56,6 @@
 #include "adc.h"
 #include "hw-arduino.h"
 #include "contiki.h"
-#include "net/netstack.h"
 
 #define DEBUG 0
 #if DEBUG
@@ -111,26 +110,21 @@ PROCESS(arduino_sketch, "Arduino Sketch Wrapper");
 #define LOOP_INTERVAL		(1 * CLOCK_SECOND)
 #endif
 
-#ifndef SLEEP_NETWORK_INTERVAL
-#define SLEEP_NETWORK_INTERVAL           (60 * CLOCK_SECOND)
-#endif
-
 PROCESS_THREAD(arduino_sketch, ev, data)
 {
   static struct etimer loop_periodic_timer;
-  static struct etimer network_off_periodic_timer;
+
   PROCESS_BEGIN();
   adc_init ();
   mcu_sleep_init ();
   setup ();
   /* Define application-specific events here. */
   etimer_set(&loop_periodic_timer, LOOP_INTERVAL);
-  etimer_set(&network_off_periodic_timer, SLEEP_NETWORK_INTERVAL);
+
   while (1) {
 	PROCESS_WAIT_EVENT();
 #if PLATFORM_HAS_BUTTON
     if(ev == sensors_event && data == &button_sensor) {
-      NETSTACK_MAC.off(1);
       mcu_sleep_off();
       PRINTF("*******BUTTON*******\n");
 
@@ -143,11 +137,6 @@ PROCESS_THREAD(arduino_sketch, ev, data)
     }
 #endif /* PLATFORM_HAS_BUTTON */
 
-    if(etimer_expired(&network_off_periodic_timer)) {
-//      NETSTACK_MAC.off(0);
-      NETSTACK_MAC.on();
-      etimer_reset(&network_off_periodic_timer);
-    }
     if(etimer_expired(&loop_periodic_timer)) {
       mcu_sleep_off();
       loop ();
@@ -157,7 +146,6 @@ PROCESS_THREAD(arduino_sketch, ev, data)
   }
   PROCESS_END();
 }
-
 
 /*
  * VI settings, see coding style
