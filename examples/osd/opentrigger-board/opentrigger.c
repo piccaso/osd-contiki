@@ -75,12 +75,7 @@ PROCESS_THREAD(arduino_sketch, ev, data)
     if(ev == sensors_event && data == &button_sensor) {
       mcu_sleep_off();
       PRINTF("*******BUTTON*******\n");
-
-      /* Call the event_handler for this application-specific event. */
-      res_event.trigger();
-
-      /* Also call the separate response example handler. */
-      res_separate.resume();
+      button ();
       mcu_sleep_on();
     }
 #endif /* PLATFORM_HAS_BUTTON */

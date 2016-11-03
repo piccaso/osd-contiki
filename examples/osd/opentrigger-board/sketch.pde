@@ -232,16 +232,21 @@ int coap_server_post(void)
     return 0;
 }
 
+void button (void)
+{
+      /* Call the event_handler for this application-specific event. */
+      res_event.trigger();
+
+      /* Also call the separate response example handler. */
+      res_separate.resume();
+      
+      /* Call the Coap Server */
+      coap_server_post();
+}
+
 void loop (void)
 {
-// test caop srever post
 
-   static int buttonstate = 1;
-   
-   if(buttonstate != button_sensor.value(0)){
-     coap_server_post();
-     buttonstate=button_sensor.value(0);
-   }
 // test chainable led
 /*
    static byte power=0;
