@@ -18,6 +18,7 @@ extern "C" {
 #include "net/netstack.h"
 #include "dev/button-sensor.h"
 #include "ChainableLED.h"
+}
 
 extern resource_t 
     res_led,
@@ -33,18 +34,14 @@ uint8_t led_pin=4;
 uint8_t led_status;
 uint8_t bled_pin=7;
 uint8_t bled_status;
-}
 
+// coap_server_post
 #define REMOTE_PORT UIP_HTONS(COAP_DEFAULT_PORT)
 // should be the same :-)
 #define UIP_NTOHS(x) UIP_HTONS(x)
-#define SERVER_NODE(ip) \
-    uip_ip6addr(ip,0xaaaa,0,0,0,0,0,0,0x01)
+#define SERVER_NODE(ip) uip_ip6addr(ip,0xaaaa,0,0,0,0,0,0,0x01)
 
-uip_ipaddr_t server_ipaddr, tmp_addr;
-char         server_resource [20] = "button";
-
-static int32_t levent_counter; 
+uip_ipaddr_t server_ipaddr;
 
 #define NUM_LEDS  1
 
@@ -195,29 +192,33 @@ void setup (void)
     rest_init_engine ();
     SERVER_NODE (&server_ipaddr);
     #pragma GCC diagnostic ignored "-Wwrite-strings"
-    rest_activate_resource (&res_led, "s/led");
-    rest_activate_resource (&res_bled, "s/bled");
+    rest_activate_resource (&res_led,     "s/led");
+    rest_activate_resource (&res_bled,    "s/bled");
     rest_activate_resource (&res_battery, "s/battery");
     rest_activate_resource (&res_cputemp, "s/cputemp");
-    rest_activate_resource(&res_event, "s/button");
-    rest_activate_resource (&res_red,   "led/R");
-    rest_activate_resource (&res_green, "led/G");
-    rest_activate_resource (&res_blue,  "led/B");         
-    rest_activate_resource (&res_rgb,  "led/RGB");         
+    rest_activate_resource(&res_event,    "s/button");
+    rest_activate_resource (&res_red,     "led/R");
+    rest_activate_resource (&res_green,   "led/G");
+    rest_activate_resource (&res_blue,    "led/B");         
+    rest_activate_resource (&res_rgb,     "led/RGB");         
     #pragma GCC diagnostic pop
 
 //    mcu_sleep_set(64);
-    NETSTACK_MAC.off(1);
+//    NETSTACK_MAC.off(1);
 }
 
 int coap_server_post(void)
 {
-    static coap_packet_t request [1]; /* Array: treat as pointer */
     char buf [25];
-    printf("post\n");
-    coap_transaction_t *transaction;
-    int buttonstate = button_sensor.value(0);
+    static coap_packet_t        request [1]; /* Array: treat as pointer */
+    coap_transaction_t          *transaction;
+    static int32_t              levent_counter; 
+
+    char server_resource [20] = "button";
+    int buttonstate           = button_sensor.value(0);
+
     sprintf (buf, "state=%d&event=%lu",buttonstate,levent_counter++);
+//  printf("post\n");
 //  printf ("%s\n", buf);
     coap_init_message (request, COAP_TYPE_NON, COAP_PUT, 0);
     coap_set_header_uri_path (request, server_resource);
