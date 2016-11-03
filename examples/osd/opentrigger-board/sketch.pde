@@ -76,8 +76,8 @@ color_from_string (const char *name, const char *uri, const char *s)
     leds.setColorRGB(0,color_rgb [0], color_rgb [1], color_rgb [2]);
     return 0;
 }
-
-int 
+ 
+extern "C" int 
 color_rgb_from_string (const char *r, const char *g, const char *b)
 {
     color_rgb [0] = atoi (r);
