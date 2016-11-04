@@ -18,12 +18,16 @@ extern "C" {
 #include "net/netstack.h"
 #include "dev/button-sensor.h"
 #include "ChainableLED.h"
+#include "sketch.h"
 }
 
 extern resource_t 
     res_led,
     res_bled,
     res_rgb, 
+    res_red, 
+    res_green, 
+    res_blue, 
     res_battery, 
     res_cputemp,
     res_event,
@@ -63,13 +67,13 @@ name_to_offset (const char * name)
   return offset;
 }
 
-static size_t
+extern "C" size_t
 color_to_string (const char *name, const char *uri, char *buf, size_t bsize)
 {
   return snprintf (buf, bsize, "%d", color_rgb [name_to_offset (name)]);
 }
 
-int 
+extern "C" int 
 color_from_string (const char *name, const char *uri, const char *s)
 {
     color_rgb [name_to_offset (name)] = atoi (s);
@@ -87,34 +91,6 @@ color_rgb_from_string (const char *r, const char *g, const char *b)
     return 0;
 }
 
-#pragma GCC diagnostic ignored "-Wwrite-strings"
-GENERIC_RESOURCE
-  ( red
-  , RED_LED
-  , s
-  , 1
-  , color_from_string
-  , color_to_string
-  );
-
-GENERIC_RESOURCE
-  ( green
-  , GREEN_LED
-  , s
-  , 1
-  , color_from_string
-  , color_to_string
-  );
-
-GENERIC_RESOURCE
-  ( blue
-  , BLUE_LED
-  , s
-  , 1
-  , color_from_string
-  , color_to_string
-  );
-#pragma GCC diagnostic pop
 
 void setup (void)
 {

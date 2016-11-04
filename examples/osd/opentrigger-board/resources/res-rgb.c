@@ -40,6 +40,7 @@
 
 #include <string.h>
 #include "rest-engine.h"
+#include "generic_resource.h"
 #include "Arduino.h"
 #include "sketch.h"
 
@@ -117,3 +118,32 @@ res_post_put_handler(void *request, void *response, uint8_t *buffer, uint16_t pr
     REST.set_response_status(response, REST.status.BAD_REQUEST);
   }
 }
+
+#pragma GCC diagnostic ignored "-Wwrite-strings"
+GENERIC_RESOURCE
+  ( red
+  , RED_LED
+  , s
+  , 1
+  , color_from_string
+  , color_to_string
+  );
+
+GENERIC_RESOURCE
+  ( green
+  , GREEN_LED
+  , s
+  , 1
+  , color_from_string
+  , color_to_string
+  );
+
+GENERIC_RESOURCE
+  ( blue
+  , BLUE_LED
+  , s
+  , 1
+  , color_from_string
+  , color_to_string
+  );
+#pragma GCC diagnostic pop
