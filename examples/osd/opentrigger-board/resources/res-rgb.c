@@ -37,7 +37,6 @@
  */
 
 #include "contiki.h"
-
 #include <string.h>
 #include "rest-engine.h"
 #include "generic_resource.h"
@@ -51,7 +50,7 @@ static void res_post_put_handler(void *request, void *response, uint8_t *buffer,
 
 /* A simple getter example. Returns the reading from the sensor with a simple etag */
 RESOURCE(res_rgb,
-         "title=\"LED: , POST/PUT mode=on|off\";rt=\"Control\"",
+         "title=\"LED: , POST/PUT r=10&g=11&b=12\";rt=\"Control\"",
          res_get_handler,
          res_post_put_handler,
          res_post_put_handler,
@@ -65,7 +64,7 @@ res_get_handler(void *request, void *response, uint8_t *buffer, uint16_t preferr
 
   if(accept == -1 || accept == REST.type.TEXT_PLAIN) {
     REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-    snprintf((char *)buffer, REST_MAX_CHUNK_SIZE, "%d %d %d",color_rgb [0],color_rgb [1],color_rgb [2] );
+    snprintf((char *)buffer, REST_MAX_CHUNK_SIZE, "r=%d&g=%d&b=%d",color_rgb [0],color_rgb [1],color_rgb [2] );
 
     REST.set_response_payload(response, buffer, strlen((char *)buffer));
   } else if(accept == REST.type.APPLICATION_JSON) {
@@ -91,20 +90,20 @@ res_post_put_handler(void *request, void *response, uint8_t *buffer, uint16_t pr
 
   if(success && (len = REST.get_post_variable(request, "r", &valr))) {
     if(len != 0) {
-
+ //       printf("r= %s;",valr);
     } else {
       success = 0;
     }
     if(success && (len = REST.get_post_variable(request, "g", &valg))) {
       if(len != 0) {
-
+ //       printf("g= %s;",valg);
       } else {
         success = 0;
       }
     }
     if(success && (len = REST.get_post_variable(request, "b", &valb))) {
       if(len != 0) {
-
+ //       printf("b= %s;\n",valb);
       } else {
         success = 0;
       }

@@ -84,6 +84,7 @@ color_from_string (const char *name, const char *uri, const char *s)
 extern "C" int 
 color_rgb_from_string (const char *r, const char *g, const char *b)
 {
+  //  printf("rgb r=%s; g=%s; b=%s;\n",r,g,b);
     color_rgb [0] = atoi (r);
     color_rgb [1] = atoi (g);
     color_rgb [2] = atoi (b);
