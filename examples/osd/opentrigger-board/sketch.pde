@@ -45,7 +45,7 @@ uint8_t bled_status;
 #define UIP_NTOHS(x) UIP_HTONS(x)
 #define SERVER_NODE(ip) uip_ip6addr(ip,0xaaaa,0,0,0,0,0,0,0x01)
 
-uip_ipaddr_t server_ipaddr;
+uip_ipaddr_t server_ipaddr, tmp_addr;
 
 #define NUM_LEDS  1
 
@@ -92,7 +92,37 @@ color_rgb_from_string (const char *r, const char *g, const char *b)
     return 0;
 }
 
+static size_t
+ip_to_string (const char *name, const char *uri, char *buf, size_t bsize)
+{
+    #define IP(x) UIP_NTOHS(server_ipaddr.u16[x])
+    return snprintf
+        ( buf, bsize, "%x:%x:%x:%x:%x:%x:%x:%x"
+        , IP(0), IP(1), IP(2), IP(3), IP(4), IP(5), IP(6), IP(7)
+        );
+}
 
+int ip_from_string (const char *name, const char *uri, const char *s)
+{
+    /* Returns 1 if successful, only copy valid address */
+    if (uiplib_ip6addrconv (s, &tmp_addr)) {
+        uip_ip6addr_copy (&server_ipaddr, &tmp_addr);
+        return 0;
+    }
+    return -1;
+}
+
+#pragma GCC diagnostic ignored "-Wwrite-strings"
+GENERIC_RESOURCE
+  ( server_ip
+  , ip
+  , ipv6_address
+  , 1
+  , ip_from_string
+  , ip_to_string
+  );
+#pragma GCC diagnostic pop
+  
 void setup (void)
 {
     // switch off the led
@@ -117,6 +147,7 @@ void setup (void)
     rest_activate_resource (&res_battery, "s/battery");
     rest_activate_resource (&res_cputemp, "s/cputemp");
     rest_activate_resource(&res_event,    "s/button");
+    rest_activate_resource (&res_server_ip,"button/ip");
     rest_activate_resource (&res_red,     "led/R");
     rest_activate_resource (&res_green,   "led/G");
     rest_activate_resource (&res_blue,    "led/B");         
