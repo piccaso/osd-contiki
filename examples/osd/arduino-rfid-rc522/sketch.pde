@@ -69,6 +69,7 @@ void setup (void)
     pinMode(led_pin, OUTPUT);
     digitalWrite(led_pin, HIGH);
     led_status=0;
+    Serial1.begin(38400);
     // RFID Init
     SPI.begin(); // Init SPI bus
     rfid.PCD_Init(); // Init MFRC522
@@ -84,6 +85,26 @@ void setup (void)
  //   NETSTACK_MAC.off(1);
 }
 
+/**
+ * Helper routine to dump a byte array as hex values to Serial. 
+ */
+void printHex(byte *buffer, byte bufferSize) {
+  for (byte i = 0; i < bufferSize; i++) {
+    Serial1.print(buffer[i] < 0x10 ? " 0" : " ");
+    Serial1.print(buffer[i], HEX);
+  }
+}
+
+/**
+ * Helper routine to dump a byte array as dec values to Serial.
+ */
+void printDec(byte *buffer, byte bufferSize) {
+  for (byte i = 0; i < bufferSize; i++) {
+    Serial1.print(buffer[i] < 0x10 ? " 0" : " ");
+    Serial1.print(buffer[i], DEC);
+  }
+}
+
 void loop (void)
 {
   // Look for new cards
@@ -94,5 +115,41 @@ void loop (void)
   if ( ! rfid.PICC_ReadCardSerial())
     return;
 
+  Serial1.print(F("PICC type: "));
+  MFRC522::PICC_Type piccType = rfid.PICC_GetType(rfid.uid.sak);
+  Serial1.println(rfid.PICC_GetTypeName(piccType));
+  
+  // Check is the PICC of Classic MIFARE type
+  if (piccType != MFRC522::PICC_TYPE_MIFARE_MINI &&  
+    piccType != MFRC522::PICC_TYPE_MIFARE_1K &&
+    piccType != MFRC522::PICC_TYPE_MIFARE_4K) {
+    Serial1.println(F("Your tag is not of type MIFARE Classic."));
+    return;
+  }
+  if (rfid.uid.uidByte[0] != nuidPICC[0] || 
+    rfid.uid.uidByte[1] != nuidPICC[1] || 
+    rfid.uid.uidByte[2] != nuidPICC[2] || 
+    rfid.uid.uidByte[3] != nuidPICC[3] ) {
+    Serial1.println(F("A new card has been detected."));
 
+    // Store NUID into nuidPICC array
+    for (byte i = 0; i < 4; i++) {
+      nuidPICC[i] = rfid.uid.uidByte[i];
+    }
+   
+    Serial1.println(F("The NUID tag is:"));
+    Serial1.print(F("In hex: "));
+    printHex(rfid.uid.uidByte, rfid.uid.size);
+    Serial1.println();
+    Serial1.print(F("In dec: "));
+    printDec(rfid.uid.uidByte, rfid.uid.size);
+    Serial1.println();
+  }
+  else Serial1.println(F("Card read previously."));
+
+  // Halt PICC
+  rfid.PICC_HaltA();
+
+  // Stop encryption on PCD
+  rfid.PCD_StopCrypto1();
 }
