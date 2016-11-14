@@ -44,7 +44,12 @@ extern "C" {
 #include "rest-engine.h"
 #include "net/netstack.h"
 
-extern resource_t res_led, res_battery, res_cputemp;
+extern resource_t 
+	res_led,
+	res_event,
+    res_separate,
+	res_battery, 
+	res_cputemp;
 
 uint8_t led_pin=4;
 uint8_t led_status;
@@ -61,7 +66,7 @@ MFRC522 rfid(SS_PIN, RST_PIN); // Instance of the class
 MFRC522::MIFARE_Key key;
 
 // Init array that will store new NUID
-byte nuidPICC[3];
+byte nuidPICC[4];
 
 void setup (void)
 {
@@ -78,9 +83,10 @@ void setup (void)
     }
     // init coap resourcen
     rest_init_engine ();
-    rest_activate_resource (&res_led, "s/led");
+    rest_activate_resource (&res_led,     "s/led");
     rest_activate_resource (&res_battery, "s/battery");
     rest_activate_resource (&res_cputemp, "s/cputemp");
+    rest_activate_resource (&res_event,   "s/rfid");
     
  //   NETSTACK_MAC.off(1);
 }
@@ -103,6 +109,15 @@ void printDec(byte *buffer, byte bufferSize) {
     Serial1.print(buffer[i] < 0x10 ? " 0" : " ");
     Serial1.print(buffer[i], DEC);
   }
+}
+
+void coap_rfid (void)
+{
+      /* Call the event_handler for this application-specific event. */
+      res_event.trigger();
+
+      /* Also call the separate response example handler. */
+      res_separate.resume();
 }
 
 void loop (void)
@@ -136,7 +151,7 @@ void loop (void)
     for (byte i = 0; i < 4; i++) {
       nuidPICC[i] = rfid.uid.uidByte[i];
     }
-   
+    coap_rfid();
     Serial1.println(F("The NUID tag is:"));
     Serial1.print(F("In hex: "));
     printHex(rfid.uid.uidByte, rfid.uid.size);

@@ -34,12 +34,11 @@ void setup (void)
     rest_activate_resource (&res_cputemp, "s/cputemp");
     
  //   NETSTACK_MAC.off(1);
- //   mcu_sleep_set(48);
+    mcu_sleep_set(128);
 }
 
 void loop (void)
 {
-	mcu_sleep_off();
-	
-	mcu_sleep_on();
+
+
 }

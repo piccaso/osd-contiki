@@ -36,6 +36,9 @@
 //#define PLATFORM_HAS_BUTTON  1
 #define PLATFORM_HAS_BATTERY 1
 
+
+#define LOOP_INTERVAL		(30 * CLOCK_SECOND)
+
 /* Save energy */
 //#define RDC_CONF_PT_YIELD_OFF
 
