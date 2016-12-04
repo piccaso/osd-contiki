@@ -85,7 +85,7 @@
 
 #if defined (__AVR_ATmega128__) || defined(__AVR_ATmega1284P__) || defined(__AVR_ATmega1281__) || defined(__AVR_ATmega128RFA1__) || defined(__AVR_ATmega128RFR2__) || defined(__AVR_ATmega256RFR2__)
 #ifndef NUMPORTS
-#define NUMPORTS 1 // we use the second serial for arduino api HardwareSerial1.cpp
+#define NUMPORTS 2
 #elif NUMPORTS > 2
 #error Only two serial ports are defined for this processor!
 #endif

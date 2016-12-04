@@ -67,6 +67,8 @@ typedef uint32_t clock_time_t;
 void clock_delay_msec(uint16_t howlong);
 void clock_adjust_ticks(clock_time_t howmany);
 
+/* We use the second serieal with the arduino api */
+#define NUMPORTS 1
 /* COM port to be used for SLIP connection. This is usually UART0. */
 #define SLIP_PORT RS232_PORT_0
 
