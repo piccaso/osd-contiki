@@ -262,7 +262,7 @@ revers(unsigned char c)
 void
 console_cputc(char c)
 {
-  int ch = c;
+  char ch = c;
 
   /* usually ACS_* don't fit in a char */
   switch (c) {
