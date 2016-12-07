@@ -29,8 +29,10 @@ extern resource_t
     res_blue, 
     res_battery, 
     res_cputemp,
-    res_event,
-    res_separate,
+    res_event1,
+    res_event2,
+    res_separate1,
+    res_separate2,
     res_server;
 
 uint8_t led_pin=4;
@@ -138,7 +140,8 @@ void setup (void)
     rest_activate_resource (&res_led,     "s/led");
     rest_activate_resource (&res_battery, "s/battery");
     rest_activate_resource (&res_cputemp, "s/cputemp");
-    rest_activate_resource(&res_event,    "s/button");
+    rest_activate_resource (&res_event1,    "s/button1");
+    rest_activate_resource (&res_event2,    "s/button2");
     rest_activate_resource (&res_server_ip,"button/ip");
     rest_activate_resource (&res_red,     "led/R");
     rest_activate_resource (&res_green,   "led/G");
@@ -179,10 +182,10 @@ int coap_server_post(void)
 void button (void)
 {
       /* Call the event_handler for this application-specific event. */
-      res_event.trigger();
+      res_event1.trigger();
 
       /* Also call the separate response example handler. */
-      res_separate.resume();
+      res_separate1.resume();
       
       /* Call the Coap Server */
       coap_server_post();
