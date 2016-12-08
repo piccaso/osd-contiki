@@ -36,7 +36,7 @@
 #define PLATFORM_HAS_BUTTON  1
 #define PLATFORM_HAS_BATTERY 1
 
-#define LOOP_INTERVAL		(CLOCK_SECOND/10)
+#define LOOP_INTERVAL		(CLOCK_SECOND/4)
 
 /* Seeping nodes are host nodes without routing features */
 #define UIP_CONF_ROUTER 0

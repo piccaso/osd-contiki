@@ -38,6 +38,9 @@ extern resource_t
 uint8_t led_pin=4;
 uint8_t led_status;
 
+uint8_t but2_pin=8;
+uint8_t but2_status;
+
 // coap_server_post
 #define REMOTE_PORT UIP_HTONS(COAP_DEFAULT_PORT)
 // should be the same :-)
@@ -128,6 +131,8 @@ void setup (void)
     pinMode(led_pin, OUTPUT);
     digitalWrite(led_pin, HIGH);
     led_status=0;
+    // init button2
+    pinMode(but2_pin, INPUT);
     // init chainable led
     leds.init();
     leds.setColorRGB(0,color_rgb [0], color_rgb [1], color_rgb [2]);
@@ -188,22 +193,17 @@ void button (void)
       res_separate1.resume();
       
       /* Call the Coap Server */
-      coap_server_post();
+      //coap_server_post();
 }
 
 void loop (void)
 {
-
-// test chainable led
-/*
-   static byte power=0;
-   for (byte i=0; i<NUM_LEDS; i++)
-   {
-     if (i%2 == 0)
-       leds.setColorRGB(i, power, 0, 0);
-     else
-       leds.setColorRGB(i, 0, 255-power, 0);
-   }
-   power+= 10;
-*/
+    if(digitalRead(but2_pin)==0)
+    {
+//        printf("0\n");
+        digitalWrite(led_pin, LOW);
+    }else{
+//        printf("1\n");
+        digitalWrite(led_pin, HIGH);
+    }
 }
