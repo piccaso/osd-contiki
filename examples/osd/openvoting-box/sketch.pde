@@ -36,10 +36,10 @@ extern resource_t
     res_server;
 
 uint8_t led_pin=4;
-uint8_t led_status;
+uint8_t led_status=0;
 
-uint8_t but2_pin=8;
-uint8_t but2_status;
+uint8_t but2_pin=20;
+uint8_t but2_status=0;
 
 // coap_server_post
 #define REMOTE_PORT UIP_HTONS(COAP_DEFAULT_PORT)
@@ -131,8 +131,9 @@ void setup (void)
     pinMode(led_pin, OUTPUT);
     digitalWrite(led_pin, HIGH);
     led_status=0;
-    // init button2
+    // init button2 with pullup on
     pinMode(but2_pin, INPUT);
+    digitalWrite(but2_pin, HIGH);
     // init chainable led
     leds.init();
     leds.setColorRGB(0,color_rgb [0], color_rgb [1], color_rgb [2]);
@@ -147,7 +148,7 @@ void setup (void)
     rest_activate_resource (&res_cputemp, "s/cputemp");
     rest_activate_resource (&res_event1,    "s/button1");
     rest_activate_resource (&res_event2,    "s/button2");
-    rest_activate_resource (&res_server_ip,"button/ip");
+    rest_activate_resource (&res_server_ip,"server/ip");
     rest_activate_resource (&res_red,     "led/R");
     rest_activate_resource (&res_green,   "led/G");
     rest_activate_resource (&res_blue,    "led/B");         
@@ -186,6 +187,7 @@ int coap_server_post(void)
 
 void button (void)
 {
+	if(button_sensor.value(0)==1){
       /* Call the event_handler for this application-specific event. */
       res_event1.trigger();
 
@@ -194,16 +196,28 @@ void button (void)
       
       /* Call the Coap Server */
       //coap_server_post();
+     }
 }
 
 void loop (void)
 {
-    if(digitalRead(but2_pin)==0)
-    {
-//        printf("0\n");
+	static int but_io2=0;
+
+    but_io2=digitalRead(but2_pin);
+    if(but_io2==0){
+        printf("0");
         digitalWrite(led_pin, LOW);
     }else{
-//        printf("1\n");
+        printf("1");
         digitalWrite(led_pin, HIGH);
+    }
+    if(but2_status != but_io2)    {
+      printf("T");
+      /* Call the event_handler for this application-specific event. */
+      res_event2.trigger();
+
+      /* Also call the separate response example handler. */
+      res_separate2.resume();
+      but2_status = but_io2;
     }
 }

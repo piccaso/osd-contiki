@@ -73,11 +73,12 @@ EVENT_RESOURCE(res_event2,
  * Use local resource state that is accessed by res_get_handler() and altered by res_event_handler() or PUT or POST.
  */
 static int32_t event_counter2 = 0;
-
+extern uint8_t but2_status;
 static void
 res_get_handler(void *request, void *response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
-  int buttonstate = button_sensor.value(0);
+//  int buttonstate = but2_status;
+  int buttonstate = 1; // Bugfix Demohardware Button 2 is a switch on/off
 
   unsigned int accept = -1;
   REST.get_header_accept(request, &accept);
