@@ -36,6 +36,8 @@
 //#define PLATFORM_HAS_BUTTON  1
 #define PLATFORM_HAS_BATTERY 1
 
+#define LOOP_INTERVAL		(1 * CLOCK_SECOND)
+
 /* For Debug: Dont allow MCU sleeping between channel checks */
 //#undef RDC_CONF_MCU_SLEEP
 //#define RDC_CONF_MCU_SLEEP       0

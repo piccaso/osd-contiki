@@ -159,9 +159,11 @@ void loop (void)
     Serial1.print(F("In dec: "));
     printDec(rfid.uid.uidByte, rfid.uid.size);
     Serial1.println();
+  }else{
+    Serial1.println(F("Card read previously."));
+    coap_rfid();
   }
-  else Serial1.println(F("Card read previously."));
-
+  
   // Halt PICC
   rfid.PICC_HaltA();
 
