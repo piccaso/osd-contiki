@@ -42,6 +42,7 @@
 #include "generic_resource.h"
 #include "Arduino.h"
 #include "sketch.h"
+#include "watchdog.h"
 
 extern uint8_t color_rgb [3];
 
@@ -50,7 +51,7 @@ static void res_post_put_handler(void *request, void *response, uint8_t *buffer,
 
 /* A simple getter example. Returns the reading from the sensor with a simple etag */
 RESOURCE(res_rgb,
-         "title=\"LED: , POST/PUT r=10&g=11&b=12\";rt=\"Control\"",
+         "title=\"LED: , POST/PUT r=10&g=11&b=12[&delay=50][&times=1]\";rt=\"Control\"",
          res_get_handler,
          res_post_put_handler,
          res_post_put_handler,
@@ -108,8 +109,39 @@ res_post_put_handler(void *request, void *response, uint8_t *buffer, uint16_t pr
         success = 0;
       }
     }
-    if((success) && !color_rgb_from_string (valr, valg, valb)) {
+
+    int _delay = 0, _times = 0;
+    if(success){
+      const char *DelayParam, *TimesParam;
+      if(REST.get_post_variable(request, "delay", &DelayParam) != 0) _delay = atoi(DelayParam);
+      if(REST.get_post_variable(request, "times", &TimesParam) != 0) _times = atoi(TimesParam);
+      if(_delay <= 0) _delay = 50;
+      if(_times <= 0) _times = 0;
+      if(_delay >= 1000 || _times >= 15) success = 0;
+    }
+
+    if(success) {
+      uint8_t color_rgb_on [3] = {atoi(valr), atoi(valg), atoi(valb)};
+      uint8_t led = 0; /* TODO: add as parameter */
       
+      if(_times > 0){
+        // blink
+        noInterrupts();
+        while(1){
+          leds_set_color_rgb(led, color_rgb_on[0], color_rgb_on[1], color_rgb_on[2]); /* on */
+          watchdog_periodic();
+          delay(_delay);
+          leds_set_color_rgb(led, 0, 0, 0); /* off */
+          if(--_times <= 0) break;
+          watchdog_periodic();
+          delay(_delay);
+        }
+        interrupts();
+      }else{
+        // no blinking, just set the colors
+        leds_set_color_rgb(led, color_rgb_on[0], color_rgb_on[1], color_rgb_on[2]);
+      }
+
     }
   } else {
     success = 0;

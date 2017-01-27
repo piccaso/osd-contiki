@@ -92,6 +92,12 @@ color_rgb_from_string (const char *r, const char *g, const char *b)
     return 0;
 }
 
+extern "C" int
+leds_set_color_rgb(byte led, byte red, byte green, byte blue){
+	leds.setColorRGB(led, red, green, blue);
+	return 0;
+}
+
 static size_t
 ip_to_string (const char *name, const char *uri, char *buf, size_t bsize)
 {
