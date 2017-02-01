@@ -54,8 +54,6 @@ void loop (void)
 {
   byte buffer[32];  // Holds one page of data
   int status;
-      
-  mcu_sleep_off();
 
   // Search for the first compatible EPROM/EEPROM on the bus.
   // If you have multiple devices you can use de.setAddress()
@@ -84,7 +82,14 @@ void loop (void)
 
       // Read the first page of memory into buffer
       if ((status = de.readPage(buffer, 0)) == 0) {
+        Serial1.println("Text:");        
         Serial1.println((char*)buffer);
+        Serial1.println("Hex:");        
+        for(int i = 0; i < 32; i++) {
+          Serial1.print(buffer[i], HEX);
+          Serial1.print(" ");
+        }
+        Serial1.println("");        
       } else {
         sprintf((char*)buffer, "Error reading page! Code: %d", status);
         Serial1.println((char*)buffer);
@@ -94,6 +99,4 @@ void loop (void)
     }
   }
   Serial1.println("");
-
-  mcu_sleep_on();
 }

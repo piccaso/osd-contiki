@@ -38,10 +38,7 @@
 
 #define SICSLOWPAN_CONF_FRAG	1
 
-#define LOOP_INTERVAL		(10 * CLOCK_SECOND)
-
-/* Save energy */
-//#define RDC_CONF_PT_YIELD_OFF
+#define LOOP_INTERVAL		(15 * CLOCK_SECOND)
 
 /* For Debug: Dont allow MCU sleeping between channel checks */
 //#undef RDC_CONF_MCU_SLEEP
