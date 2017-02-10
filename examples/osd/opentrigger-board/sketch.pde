@@ -161,7 +161,7 @@ void setup (void)
     #pragma GCC diagnostic pop
 
 //    mcu_sleep_set(64);
-//    NETSTACK_MAC.off(1);
+    NETSTACK_MAC.off(1);
 }
 
 int coap_server_post(void)
