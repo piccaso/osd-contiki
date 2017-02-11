@@ -41,13 +41,14 @@
 #include <string.h>
 #include "rest-engine.h"
 #include "Arduino.h"
+#include "watchdog.h"
 
 static void res_get_handler(void *request, void *response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset);
 static void res_post_put_handler(void *request, void *response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset);
 
 /* A simple getter example. Returns the reading from the sensor with a simple etag */
 RESOURCE(res_led,
-         "title=\"LED: , POST/PUT mode=on|off\";rt=\"Control\"",
+         "title=\"LED: , POST/PUT mode=on|off|blink[&delay=50][&times=1]\";rt=\"Control\"",
          res_get_handler,
          res_post_put_handler,
          res_post_put_handler,
@@ -93,6 +94,28 @@ res_post_put_handler(void *request, void *response, uint8_t *buffer, uint16_t pr
     } else if(strncmp(mode, "off", len) == 0) {
       digitalWrite(led_pin, HIGH);
       led_status=0;
+    } else if(strncmp(mode, "blink", len) == 0) {
+      int _delay = 0, _times = 0;
+      const char *DelayParam, *TimesParam;
+      if(REST.get_post_variable(request, "delay", &DelayParam) != 0) _delay = atoi(DelayParam);
+      if(REST.get_post_variable(request, "times", &TimesParam) != 0) _times = atoi(TimesParam);
+      if(_delay <= 0) _delay = 50;
+      if(_times <= 1) _times = 1;
+      if(_delay >= 1600){
+        success = 0;
+      }else{
+        noInterrupts();
+        while(1){
+          digitalWrite(led_pin, (led_status == 0 ? LOW : HIGH));
+          watchdog_periodic();
+          delay(_delay);
+          digitalWrite(led_pin, (led_status == 0 ? HIGH : LOW));
+          if(--_times <= 0) break;
+          watchdog_periodic();
+          delay(_delay);
+        }
+        interrupts();
+      }
     } else {
       success = 0;
     }
