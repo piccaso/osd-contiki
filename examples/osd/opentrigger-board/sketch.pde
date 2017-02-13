@@ -19,6 +19,7 @@ extern "C" {
 #include "dev/button-sensor.h"
 #include "ChainableLED.h"
 #include "sketch.h"
+#include "powersave.h"
 }
 
 extern resource_t 
@@ -161,7 +162,7 @@ void setup (void)
     #pragma GCC diagnostic pop
 
 //    mcu_sleep_set(64);
-    NETSTACK_MAC.off(1);
+//    NETSTACK_MAC.off(1);
 }
 
 int coap_server_post(void)
@@ -192,6 +193,9 @@ int coap_server_post(void)
 
 void button (void)
 {
+      /* report user interaction */
+      powersave_reset();
+      			
       /* Call the event_handler for this application-specific event. */
       res_event.trigger();
 
@@ -204,7 +208,7 @@ void button (void)
 
 void loop (void)
 {
-
+	powersave_loop();
 // test chainable led
 /*
    static byte power=0;
