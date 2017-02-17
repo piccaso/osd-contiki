@@ -47,7 +47,9 @@ uint8_t bled_status;
 
 uip_ipaddr_t server_ipaddr, tmp_addr;
 
+#ifndef NUM_LEDS
 #define NUM_LEDS  1
+#endif
 
 // Merkurboard grove i2c D8, D9
 ChainableLED leds(8, 9, NUM_LEDS);
@@ -140,8 +142,13 @@ void setup (void)
     digitalWrite(bled_pin, LOW);
     bled_status=0;
     // init chainable led
-    leds.init();
-    leds.setColorRGB(0,color_rgb [0], color_rgb [1], color_rgb [2]);
+    if(NUM_LEDS > 0){
+      leds.init();
+      for(byte led_nr = 0; led_nr < NUM_LEDS; led_nr++){
+        leds.setColorRGB(led_nr, color_rgb [0], color_rgb [1], color_rgb [2]);
+      }
+    }
+		printf("NUM_LEDS=%i\n", NUM_LEDS);
     // sensors
     SENSORS_ACTIVATE(button_sensor);
     // init coap resourcen

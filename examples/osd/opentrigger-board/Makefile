@@ -13,6 +13,10 @@ CFLAGS += -DPROJECT_CONF_H=\"project-conf.h\"
 
 PROJECT_SOURCEFILES += ${SKETCH}.cpp ChainableLED.cpp
 
+ifdef NUM_LEDS
+CFLAGS += -DNUM_LEDS=$(NUM_LEDS)
+endif
+
 # automatically build RESTful resources
 REST_RESOURCES_DIR = ./resources
 REST_RESOURCES_DIR_COMMON = ../resources-common
