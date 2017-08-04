@@ -126,12 +126,21 @@ res_post_put_handler(void *request, void *response, uint8_t *buffer, uint16_t pr
       
       if(_times > 0){
         // blink
+        byte led_nr;
         noInterrupts();
         while(1){
-          leds_set_color_rgb(_led, color_rgb_on[0], color_rgb_on[1], color_rgb_on[2]); /* on */
+          for(led_nr = 0; led_nr < NUM_LEDS; led_nr++){
+            if(_led == -1 || led_nr == _led){
+              leds_set_color_rgb(led_nr, color_rgb_on[0], color_rgb_on[1], color_rgb_on[2]); /* on */
+            }
+          }
           watchdog_periodic();
           delay(_delay);
-          leds_set_color_rgb(_led, 0, 0, 0); /* off */
+          for(led_nr = 0; led_nr < NUM_LEDS; led_nr++){
+            if(_led == -1 || led_nr == _led){
+              leds_set_color_rgb(led_nr, 0, 0, 0); /* off */
+            }
+          }
           if(--_times <= 0) break;
           watchdog_periodic();
           delay(_delay);

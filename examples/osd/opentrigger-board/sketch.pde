@@ -47,10 +47,6 @@ uint8_t bled_status;
 
 uip_ipaddr_t server_ipaddr, tmp_addr;
 
-#ifndef NUM_LEDS
-#define NUM_LEDS  1
-#endif
-
 // Merkurboard grove i2c D8, D9
 ChainableLED leds(8, 9, NUM_LEDS);
 

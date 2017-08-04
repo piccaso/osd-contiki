@@ -15,6 +15,8 @@ PROJECT_SOURCEFILES += ${SKETCH}.cpp ChainableLED.cpp
 
 ifdef NUM_LEDS
 CFLAGS += -DNUM_LEDS=$(NUM_LEDS)
+else
+CFLAGS += -DNUM_LEDS=1
 endif
 
 # automatically build RESTful resources
